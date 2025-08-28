@@ -3,39 +3,41 @@ import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { characterClasses } from "@/config/characterClasses";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { TeamStatus } from "@/components/game/TeamStatus";
 
 export function CharacterSelection() {
-  const { gameState, currentUser, setGameState, startGame } =
-    useMultiplayerGame();
+  const { gameState, currentUser, startGame, selectCharacterForPlayer, unselectCharacter, backToMenu } = useMultiplayerGame();
   const { players } = gameState;
   const playerList = Object.values(players);
 
   const [selectedClass, setSelectedClass] = useState(null);
 
+  // ++ VERIFICAÇÃO DE SEGURANÇA ++
+  // Se o currentUser ainda não foi definido (durante a transição de sair da sala), não renderiza nada.
+  if (!currentUser) {
+    return null; 
+  }
+
   const handleSelectHero = (heroName, className) => {
-    setGameState((prev) => ({
-      ...prev,
-      players: {
-        ...prev.players,
-        [currentUser.id]: {
-          ...prev.players[currentUser.id],
-          character: {
-            name: heroName,
-            className: className,
-          },
-          ready: true,
-        },
-      },
-    }));
+    selectCharacterForPlayer(currentUser.id, { name: heroName, className: className });
     setSelectedClass(null);
+  };
+
+  const handleCardClick = (charClass) => {
+    const isSelectedByMe = mySelection?.className === charClass.name;
+    const isTakenByOther = takenClasses.includes(charClass.name);
+    if (isSelectedByMe) {
+      unselectCharacter(currentUser.id);
+    } else if (!isTakenByOther) {
+      setSelectedClass(charClass);
+    }
+  };
+
+  const handleLeaveRoom = () => {
+    if (window.confirm("Você tem certeza que deseja sair da sala?")) {
+      backToMenu();
+    }
   };
 
   const mySelection = players[currentUser.id]?.character;
@@ -43,43 +45,42 @@ export function CharacterSelection() {
     .filter((p) => p.character && p.id !== currentUser.id)
     .map((p) => p.character.className);
 
-  const allPlayersReady = playerList.every((p) => p.ready);
+  const allPlayersReady = playerList.length > 0 && playerList.every((p) => p.ready);
+  const isHost = players[currentUser.id]?.isHost;
 
   return (
     <div className="min-h-screen w-full bg-dungeon-black p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-ethereal-blue mb-2">
-            Forme sua Equipe
-          </h1>
-          <p className="text-stone-light">
-            Cada herói deve escolher uma classe única para a aventura.
-          </p>
+        <div className="flex justify-between items-center mb-8">
+            <div className="text-center flex-grow">
+                <h1 className="text-4xl font-bold text-ethereal-blue mb-2">
+                    Forme sua Equipe
+                </h1>
+                <p className="text-stone-light">
+                    Cada herói deve escolher uma classe única para a aventura.
+                </p>
+            </div>
+            <Button onClick={handleLeaveRoom} variant="destructive">
+                Sair da Sala
+            </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
             {characterClasses.map((charClass) => {
-              const isTaken = takenClasses.includes(charClass.name);
+              const isTakenByOther = takenClasses.includes(charClass.name);
               const isSelectedByMe = mySelection?.className === charClass.name;
+              const isClickable = !isTakenByOther;
 
               return (
                 <Card
                   key={charClass.name}
-                  onClick={() => !isTaken && setSelectedClass(charClass)}
+                  onClick={() => isClickable && handleCardClick(charClass)}
                   className={`
                     bg-stone-charcoal/80 border-2 text-white text-center p-6
                     transition-all duration-200 h-full flex flex-col justify-center
-                    ${
-                      isTaken
-                        ? "opacity-40 cursor-not-allowed"
-                        : "cursor-pointer hover:bg-stone-charcoal"
-                    }
-                    ${
-                      isSelectedByMe
-                        ? "border-crystal-blue shadow-lg shadow-crystal-blue/20"
-                        : "border-stone-light/20"
-                    }
+                    ${isSelectedByMe ? "border-crystal-blue shadow-lg shadow-crystal-blue/20" : "border-stone-light/20"}
+                    ${!isClickable ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:border-frost-blue"}
                   `}
                 >
                   <div className="text-6xl mb-4">{charClass.icon}</div>
@@ -101,21 +102,23 @@ export function CharacterSelection() {
 
           <div className="space-y-6">
             <TeamStatus />
-            <div className="text-center">
-              <Button
-                size="lg"
-                onClick={startGame}
-                disabled={!allPlayersReady}
-                className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl py-6 px-10 w-full disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Iniciar Jogo
-              </Button>
-              {!allPlayersReady && (
-                <p className="text-sm text-yellow-400 mt-2">
-                  Aguardando todos os jogadores escolherem...
-                </p>
-              )}
-            </div>
+            {isHost && (
+              <div className="text-center">
+                <Button
+                  size="lg"
+                  onClick={startGame}
+                  disabled={!allPlayersReady}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold text-xl py-6 px-10 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Iniciar Jogo
+                </Button>
+                {!allPlayersReady && (
+                  <p className="text-sm text-yellow-400 mt-2">
+                    Aguardando todos os jogadores escolherem...
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

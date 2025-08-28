@@ -1,9 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
-import { Button } from "@/components/ui/button";
 
 export function TeamStatus() {
-  const { gameState, currentUser, selectCharacterForPlayer } = useMultiplayerGame();
+  const { gameState } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
 
   return (
@@ -31,19 +30,6 @@ export function TeamStatus() {
             ) : (
               <div className="flex items-center gap-2">
                 <p className="text-sm text-stone-light italic">Escolhendo...</p>
-                {/* --- BOTÃO DE TESTE ADICIONADO AQUI --- */}
-                {/* Ele só aparece para os outros jogadores */}
-                {player.id !== currentUser.id && (
-                  <Button 
-                    size="sm" 
-                    variant="ghost"
-                    className="h-auto p-1 text-lg hover:bg-stone-charcoal"
-                    onClick={() => selectCharacterForPlayer(player.id)}
-                    title={`Escolher por ${player.name}`}
-                  >
-                    🎲
-                  </Button>
-                )}
               </div>
             )}
           </div>
