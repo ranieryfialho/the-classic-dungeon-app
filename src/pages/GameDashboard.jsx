@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ManageHeroModal } from "@/components/game/ManageHeroModal";
 import { ItemDetailsModal } from "@/components/game/ItemDetailsModal";
 import { EndGameModal } from "@/components/game/EndGameModal";
+import { characterClasses } from "@/config/characterClasses"; // 1. Importar as classes de personagem
 
 export function GameDashboard() {
   const { gameState, currentUser, proposeEndGame } = useMultiplayerGame();
@@ -24,6 +25,23 @@ export function GameDashboard() {
     setShowingItem(item);
   };
 
+  // 2. Nova função para lidar com a proposta de fim de jogo
+  const handleProposeEndGame = () => {
+    if (!currentUser || !currentUser.character) return;
+
+    // Encontra os dados da classe do jogador atual
+    const classData = characterClasses.find(c => c.name === currentUser.character.className);
+    if (!classData) return;
+
+    // Verifica se o ouro do jogador é maior ou igual à meta
+    if (currentUser.gold >= classData.goldTarget) {
+      proposeEndGame();
+    } else {
+      // Se não for, exibe um alerta
+      alert(`Você ainda não atingiu sua meta de ouro! Você precisa de ${classData.goldTarget.toLocaleString('pt-BR')} de ouro para propor o fim do jogo.`);
+    }
+  };
+
   const hasPendingProposal = !!gameState.room?.endGameProposal;
 
   return (
@@ -31,8 +49,9 @@ export function GameDashboard() {
       <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black p-4 md:p-8">
         <header className="flex justify-between items-center mb-8 max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold text-ethereal-blue">A Aventura Começou!</h1>
+          {/* 3. Botão agora chama a nova função handleProposeEndGame */}
           <Button 
-            onClick={proposeEndGame} 
+            onClick={handleProposeEndGame} 
             disabled={hasPendingProposal}
             className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg"
           >
