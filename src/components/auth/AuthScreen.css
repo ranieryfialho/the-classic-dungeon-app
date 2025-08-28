@@ -12,7 +12,7 @@
     #1A1D23 50%,  /* --stone-charcoal */
     #0B0B0F 100%  /* --dungeon-black */
   );
-  color: #E2E8F0; /* --text-primary */
+  color: #E2E8F0; /* Cor de texto primária sugerida */
   font-family: 'Poppins', sans-serif;
 }
 
@@ -35,7 +35,7 @@
   justify-content: center;
   align-items: flex-start;
   position: relative;
-  background-color: #0B0B0F; /* --dungeon-black */
+  background-color: #0B0B0F; /* --dungeon-black, para maior contraste */
   z-index: 1;
 }
 
@@ -84,7 +84,7 @@
   margin-bottom: 30px;
   text-align: center;
   font-weight: 600;
-  color: #F59E0B; /* --divine-amber */
+  color: #93C5FD /* --divine-amber */
 }
 
 .auth-form-section form {
@@ -98,7 +98,7 @@
   border: 1px solid #2D3748; /* --ancient-stone */
   padding: 12px 15px;
   border-radius: 8px;
-  color: #E2E8F0; /* --text-primary */
+  color: #E2E8F0; /* Cor de texto primária sugerida */
   font-size: 1rem;
 }
 
@@ -113,8 +113,8 @@
 }
 
 .auth-form-section button[type="submit"] {
-  background-color: #D97706; /* --treasure-gold */
-  color: #0B0B0F; /* --dungeon-black */
+  background-color: #3B82F6; /* --crystal-blue */
+  color: #E2E8F0; /* Texto primário claro */
   border: none;
   padding: 15px;
   border-radius: 8px;
@@ -126,8 +126,8 @@
 }
 
 .auth-form-section button[type="submit"]:hover {
-  background-color: #F59E0B; /* --divine-amber */
-  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4);
+  background-color: #60A5FA; /* --frost-blue */
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
 .auth-error-message {
@@ -158,7 +158,7 @@
     color: #60A5FA; /* --frost-blue */
 }
 
-/* Responsividade (manter como está) */
+/* Responsividade */
 @media (max-width: 768px) {
   .auth-card {
     flex-direction: column;

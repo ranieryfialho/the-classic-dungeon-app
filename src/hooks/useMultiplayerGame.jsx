@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect } from 'react';
-import { useStoredState, useUser, useCollaborators } from './useHatchMock';
+import { useAuth } from '@/context/AuthContext'; 
+import { useStoredState } from './useHatchMock';
 import { characterClasses } from '@/config/characterClasses';
 import { specialTreasures } from '@/config/specialTreasures';
 
@@ -13,49 +14,37 @@ const initialGameState = {
 
 export function MultiplayerProvider({ children }) {
   const [gameState, setGameState] = useStoredState('dungeonGame', initialGameState);
-  const currentUser = useUser();
-  const collaborators = useCollaborators();
 
-  useEffect(() => {
-    if (gameState.gamePhase === 'lobby' || gameState.gamePhase === 'selection') {
-      const playerIds = Object.keys(gameState.players);
-      collaborators.forEach(collab => {
-        if (!playerIds.includes(collab.id)) {
-          setGameState(prev => ({ 
-            ...prev, 
-            players: { 
-              ...prev.players, 
-              [collab.id]: { 
-                ...collab, 
-                isHost: collab.id === prev.room.hostId, 
-                ready: false, 
-                character: null, 
-              } 
-            } 
-          }));
-        }
-      });
-    }
-  }, [collaborators, gameState.gamePhase, setGameState]);
+  const { currentUser: authUser } = useAuth();
 
   const createRoom = () => {
+    if (!authUser) {
+      console.error("Usuário não autenticado, não é possível criar a sala.");
+      return;
+    }
+
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const inviteLink = `${window.location.origin}?room=${roomId}`;
+
+    const initialPlayer = {
+      id: authUser.uid, 
+      name: authUser.email,
+      color: "#" + Math.floor(Math.random()*16777215).toString(16),
+      isHost: true,
+      ready: false,
+      character: null,
+    };
+
     setGameState({ 
       ...initialGameState, 
       room: { 
         id: roomId, 
         inviteLink, 
-        hostId: currentUser.id, 
-        hostName: currentUser.name, 
+        hostId: initialPlayer.id, 
+        hostName: initialPlayer.name, 
       }, 
       players: { 
-        [currentUser.id]: { 
-          ...currentUser, 
-          isHost: true, 
-          ready: false, 
-          character: null, 
-        } 
+        [initialPlayer.id]: initialPlayer
       }, 
       gamePhase: 'lobby', 
     });
@@ -145,7 +134,7 @@ export function MultiplayerProvider({ children }) {
   const value = { 
     gameState, 
     setGameState, 
-    currentUser, 
+    currentUser: gameState.players[authUser?.uid],
     createRoom, 
     startGameSelection, 
     startGame, 

@@ -1,20 +1,33 @@
 import { useAuth } from './context/AuthContext';
+import { useMultiplayerGame } from './hooks/useMultiplayerGame';
 import { AuthPage } from './pages/AuthPage';
+import { MainMenu } from './pages/MainMenu';
+import { RoomLobby } from './pages/RoomLobby';
 import { CharacterSelection } from './pages/CharacterSelection';
+import { GameDashboard } from './pages/GameDashboard';
 
 function App() {
   const { currentUser, logout } = useAuth();
+  const { gameState } = useMultiplayerGame();
+
+  const renderGameScreen = () => {
+    switch (gameState.gamePhase) {
+      case 'lobby':
+        return <RoomLobby />;
+      case 'selection':
+        return <CharacterSelection />;
+      case 'playing':
+        return <GameDashboard />;
+      case 'menu':
+      default:
+        return <MainMenu />;
+    }
+  };
 
   return (
     <>
       {currentUser ? (
-        <div>
-          <header style={{ padding: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#282c34', color: 'white' }}>
-            <p>Bem-vindo, {currentUser.email}!</p>
-            <button onClick={logout} style={{ background: 'none', border: '1px solid #FF7043', color: '#FF7043', padding: '8px 15px', borderRadius: '5px', cursor: 'pointer' }}>Sair</button>
-          </header>
-          <CharacterSelection />
-        </div>
+        renderGameScreen()
       ) : (
         <AuthPage />
       )}
