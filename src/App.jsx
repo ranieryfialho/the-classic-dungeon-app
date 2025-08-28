@@ -5,7 +5,8 @@ import { MainMenu } from './pages/MainMenu';
 import { RoomLobby } from './pages/RoomLobby';
 import { CharacterSelection } from './pages/CharacterSelection';
 import { GameDashboard } from './pages/GameDashboard';
-import { PlayerProfile } from './pages/PlayerProfile'; // <-- Importar a nova página
+import { PlayerProfile } from './pages/PlayerProfile';
+import { JoinRoom } from './pages/JoinRoom';
 
 function App() {
   const { currentUser } = useAuth();
@@ -19,9 +20,10 @@ function App() {
         return <CharacterSelection />;
       case 'playing':
         return <GameDashboard />;
-      // ++ ADICIONAR O NOVO CASO ++
       case 'profile':
         return <PlayerProfile />;
+      case 'joining':
+        return <JoinRoom />;
       case 'menu':
       default:
         return <MainMenu />;

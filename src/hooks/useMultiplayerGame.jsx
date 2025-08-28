@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect } from 'react';
+import { createContext, useContext } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useStoredState } from './useHatchMock';
 import { characterClasses } from '@/config/characterClasses';
 import { specialTreasures } from '@/config/specialTreasures';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; // getDoc importado
+import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion } from 'firebase/firestore';
 
 const GameContext = createContext();
 
@@ -18,23 +18,18 @@ export function MultiplayerProvider({ children }) {
   const [gameState, setGameState] = useStoredState('dungeonGame', initialGameState);
   const { currentUser: authUser } = useAuth();
 
-  // ++ LÓGICA ATUALIZADA PARA USAR O NOME DO JOGADOR ++
-  const createRoom = async () => { // Transformada em async
-    if (!authUser) {
-      console.error("Usuário não autenticado, não é possível criar a sala.");
-      return;
-    }
+  const createRoom = async () => {
+    if (!authUser) return;
 
-    // Busca o nome do jogador no Firestore
     let playerName = authUser.email;
     try {
-      const userDocRef = doc(db, 'users', authUser.uid);
-      const userDocSnap = await getDoc(userDocRef);
-      if (userDocSnap.exists() && userDocSnap.data().displayName) {
-        playerName = userDocSnap.data().displayName;
-      }
+        const userDocRef = doc(db, 'users', authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().displayName) {
+          playerName = userDocSnap.data().displayName;
+        }
     } catch (error) {
-      console.error("Erro ao buscar nome do jogador, usando e-mail como fallback.", error);
+        console.error("Erro ao buscar nome do jogador, usando e-mail.", error);
     }
 
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -42,12 +37,24 @@ export function MultiplayerProvider({ children }) {
     
     const initialPlayer = {
       id: authUser.uid,
-      name: playerName, // Usa o nome do perfil ou o email
+      name: playerName,
       color: "#" + Math.floor(Math.random()*16777215).toString(16),
       isHost: true,
       ready: false,
       character: null,
     };
+
+    const roomData = { 
+      id: roomId, 
+      inviteLink, 
+      hostId: initialPlayer.id, 
+      hostName: initialPlayer.name,
+      createdAt: serverTimestamp(),
+      players: [initialPlayer],
+      gamePhase: 'lobby'
+    };
+    
+    await setDoc(doc(db, "rooms", roomId), roomData);
 
     setGameState({ 
       ...initialGameState, 
@@ -55,6 +62,60 @@ export function MultiplayerProvider({ children }) {
       players: { [initialPlayer.id]: initialPlayer }, 
       gamePhase: 'lobby', 
     });
+  };
+
+  const joinRoom = async (roomId) => {
+    if (!authUser) return false;
+    const roomRef = doc(db, "rooms", roomId);
+    try {
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) {
+        console.error("Sala não encontrada");
+        return false;
+      }
+      const roomData = roomSnap.data();
+      if (roomData.players.length >= 4) return false;
+      
+      let newPlayer = null;
+      if (!roomData.players.some(p => p.id === authUser.uid)) {
+        let playerName = authUser.email;
+        const userDocRef = doc(db, 'users', authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().displayName) {
+          playerName = userDocSnap.data().displayName;
+        }
+        newPlayer = {
+          id: authUser.uid,
+          name: playerName,
+          color: "#" + Math.floor(Math.random()*16777215).toString(16),
+          isHost: false,
+          ready: false,
+          character: null,
+        };
+        await updateDoc(roomRef, { players: arrayUnion(newPlayer) });
+      }
+      
+      const updatedPlayersList = newPlayer ? [...roomData.players, newPlayer] : roomData.players;
+      const playersObject = updatedPlayersList.reduce((acc, player) => {
+        acc[player.id] = player;
+        return acc;
+      }, {});
+      
+      setGameState({
+        ...gameState,
+        room: { id: roomData.id, inviteLink: roomData.inviteLink, hostId: roomData.hostId, hostName: roomData.hostName },
+        players: playersObject,
+        gamePhase: 'lobby'
+      });
+      return true;
+    } catch (error) {
+      console.error("Erro ao entrar na sala:", error);
+      return false;
+    }
+  };
+
+  const goToJoinRoom = () => {
+    setGameState(prev => ({ ...prev, gamePhase: 'joining' }));
   };
 
   const startGameSelection = () => {
@@ -151,19 +212,11 @@ export function MultiplayerProvider({ children }) {
   }
 
   const value = { 
-    gameState, 
-    setGameState, 
-    currentUser: gameState.players[authUser?.uid], 
-    createRoom, 
-    startGameSelection, 
-    startGame, 
-    selectCharacterForPlayer, 
-    updatePlayerStats, 
-    addItemToInventory, 
-    removeItemFromInventory,
-    endGameAndSaveHistory,
-    goToProfile,
-    backToMenu,
+    gameState, setGameState, currentUser: gameState.players[authUser?.uid], 
+    createRoom, joinRoom, goToJoinRoom,
+    startGameSelection, startGame, selectCharacterForPlayer, 
+    updatePlayerStats, addItemToInventory, removeItemFromInventory,
+    endGameAndSaveHistory, goToProfile, backToMenu,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
