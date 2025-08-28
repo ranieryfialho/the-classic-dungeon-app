@@ -4,7 +4,7 @@ import { useStoredState } from './useHatchMock';
 import { characterClasses } from '@/config/characterClasses';
 import { specialTreasures } from '@/config/specialTreasures';
 import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; // getDoc importado
 
 const GameContext = createContext();
 
@@ -18,40 +18,56 @@ export function MultiplayerProvider({ children }) {
   const [gameState, setGameState] = useStoredState('dungeonGame', initialGameState);
   const { currentUser: authUser } = useAuth();
 
-  const createRoom = () => {
+  // ++ LÓGICA ATUALIZADA PARA USAR O NOME DO JOGADOR ++
+  const createRoom = async () => { // Transformada em async
     if (!authUser) {
       console.error("Usuário não autenticado, não é possível criar a sala.");
       return;
     }
+
+    // Busca o nome do jogador no Firestore
+    let playerName = authUser.email;
+    try {
+      const userDocRef = doc(db, 'users', authUser.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      if (userDocSnap.exists() && userDocSnap.data().displayName) {
+        playerName = userDocSnap.data().displayName;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar nome do jogador, usando e-mail como fallback.", error);
+    }
+
     const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const inviteLink = `${window.location.origin}?room=${roomId}`;
+    
     const initialPlayer = {
       id: authUser.uid,
-      name: authUser.email,
-      color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+      name: playerName, // Usa o nome do perfil ou o email
+      color: "#" + Math.floor(Math.random()*16777215).toString(16),
       isHost: true,
       ready: false,
       character: null,
     };
-    setGameState({
-      ...initialGameState,
-      room: { id: roomId, inviteLink, hostId: initialPlayer.id, hostName: initialPlayer.name },
-      players: { [initialPlayer.id]: initialPlayer },
-      gamePhase: 'lobby',
+
+    setGameState({ 
+      ...initialGameState, 
+      room: { id: roomId, inviteLink, hostId: initialPlayer.id, hostName: initialPlayer.name }, 
+      players: { [initialPlayer.id]: initialPlayer }, 
+      gamePhase: 'lobby', 
     });
   };
 
   const startGameSelection = () => {
     setGameState(prev => ({ ...prev, gamePhase: 'selection' }));
   };
-
+  
   const startGame = () => {
     const playersWithStats = { ...gameState.players };
     Object.keys(playersWithStats).forEach(playerId => {
-      if (playersWithStats[playerId].character) {
+      if(playersWithStats[playerId].character) {
         playersWithStats[playerId] = {
           ...playersWithStats[playerId],
-          gold: 0,
+          gold: 0, 
           isWounded: false,
           isGoldHidden: false,
           inventory: [],
@@ -125,36 +141,34 @@ export function MultiplayerProvider({ children }) {
     }
     setGameState({ ...initialGameState, gamePhase: 'menu' });
   };
-
-  // ++ NOVA FUNÇÃO ++
+  
   const goToProfile = () => {
     setGameState(prev => ({ ...prev, gamePhase: 'profile' }));
   };
-
-  // ++ NOVA FUNÇÃO ++
+  
   const backToMenu = () => {
     setGameState(prev => ({ ...prev, gamePhase: 'menu' }));
   }
 
-  const value = {
-    gameState,
-    setGameState,
-    currentUser: gameState.players[authUser?.uid],
-    createRoom,
-    startGameSelection,
-    startGame,
-    selectCharacterForPlayer,
-    updatePlayerStats,
-    addItemToInventory,
+  const value = { 
+    gameState, 
+    setGameState, 
+    currentUser: gameState.players[authUser?.uid], 
+    createRoom, 
+    startGameSelection, 
+    startGame, 
+    selectCharacterForPlayer, 
+    updatePlayerStats, 
+    addItemToInventory, 
     removeItemFromInventory,
     endGameAndSaveHistory,
-    goToProfile, // <-- Exportar a função
-    backToMenu,  // <-- Exportar a função
+    goToProfile,
+    backToMenu,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
 }
 
-export const useMultiplayerGame = () => {
-  return useContext(GameContext);
+export const useMultiplayerGame = () => { 
+  return useContext(GameContext); 
 };
