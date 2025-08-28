@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useAuth } from './context/AuthContext';
 import { useMultiplayerGame } from './hooks/useMultiplayerGame';
 import { AuthPage } from './pages/AuthPage';
@@ -10,7 +11,20 @@ import { JoinRoom } from './pages/JoinRoom';
 
 function App() {
   const { currentUser } = useAuth();
-  const { gameState } = useMultiplayerGame();
+  const { gameState, joinRoom } = useMultiplayerGame();
+
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomIdFromUrl = urlParams.get('room');
+
+    if (roomIdFromUrl && currentUser && !gameState.room) {
+      console.log(`Tentando entrar na sala ${roomIdFromUrl} a partir da URL.`);
+      joinRoom(roomIdFromUrl);
+      
+      // Limpa a URL para evitar reentradas acidentais ao recarregar a página
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [currentUser, gameState.room, joinRoom]);
 
   const renderGameScreen = () => {
     switch (gameState.gamePhase) {
