@@ -1,0 +1,178 @@
+/* src/components/auth/AuthScreen.css */
+/* ATUALIZADO COM A PALETA "THE CLASSIC DUNGEON" */
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* Usando o gradiente de background principal da paleta */
+  background: radial-gradient(ellipse at center, 
+    #2D3748 0%,   /* --ancient-stone */
+    #1A1D23 50%,  /* --stone-charcoal */
+    #0B0B0F 100%  /* --dungeon-black */
+  );
+  color: #E2E8F0; /* --text-primary */
+  font-family: 'Poppins', sans-serif;
+}
+
+.auth-card {
+  display: flex;
+  background-color: #1A1D23; /* --stone-charcoal */
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  max-width: 900px;
+  width: 90%;
+  border: 1px solid rgba(74, 85, 104, 0.3); /* --weathered-gray com transparência */
+}
+
+.auth-welcome-section {
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  position: relative;
+  background-color: #0B0B0F; /* --dungeon-black */
+  z-index: 1;
+}
+
+.auth-welcome-section h1 {
+  font-size: 3.5rem;
+  margin-bottom: 20px;
+  font-weight: 700;
+  color: #93C5FD; /* --ethereal-blue */
+}
+
+.auth-welcome-section p {
+  font-size: 1rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  color: #718096; /* --stone-light */
+}
+
+.auth-welcome-section .learn-more-button {
+  background-color: #F59E0B; /* --divine-amber */
+  color: #0B0B0F; /* --dungeon-black */
+  border: none;
+  padding: 12px 25px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.auth-welcome-section .learn-more-button:hover {
+  background-color: #FCD34D; /* --golden-glow */
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.4); /* Sombra de brilho dourado */
+}
+
+.auth-form-section {
+  flex: 1;
+  padding: 40px;
+  background-color: #1A1D23; /* --stone-charcoal */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.auth-form-section h2 {
+  font-size: 2.2rem;
+  margin-bottom: 30px;
+  text-align: center;
+  font-weight: 600;
+  color: #F59E0B; /* --divine-amber */
+}
+
+.auth-form-section form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.auth-form-section input {
+  background-color: #0B0B0F; /* --dungeon-black */
+  border: 1px solid #2D3748; /* --ancient-stone */
+  padding: 12px 15px;
+  border-radius: 8px;
+  color: #E2E8F0; /* --text-primary */
+  font-size: 1rem;
+}
+
+.auth-form-section input::placeholder {
+  color: #4A5568; /* --weathered-gray */
+}
+
+.auth-form-section input:focus {
+  outline: none;
+  border-color: #3B82F6; /* --crystal-blue */
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+.auth-form-section button[type="submit"] {
+  background-color: #D97706; /* --treasure-gold */
+  color: #0B0B0F; /* --dungeon-black */
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: all 0.3s ease;
+}
+
+.auth-form-section button[type="submit"]:hover {
+  background-color: #F59E0B; /* --divine-amber */
+  box-shadow: 0 0 20px rgba(217, 119, 6, 0.4);
+}
+
+.auth-error-message {
+  color: #EF4444; /* --danger-red */
+  margin-top: 10px;
+  text-align: center;
+}
+
+.auth-toggle-mode {
+    text-align: center;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    color: #718096; /* --stone-light */
+}
+
+.auth-toggle-mode button {
+    background: none;
+    border: none;
+    color: #3B82F6; /* --crystal-blue */
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0;
+    margin-left: 5px;
+    text-decoration: underline;
+}
+
+.auth-toggle-mode button:hover {
+    color: #60A5FA; /* --frost-blue */
+}
+
+/* Responsividade (manter como está) */
+@media (max-width: 768px) {
+  .auth-card {
+    flex-direction: column;
+    max-width: 400px;
+  }
+  .auth-welcome-section {
+    padding: 30px;
+    text-align: center;
+    align-items: center;
+  }
+  .auth-form-section {
+    padding: 30px;
+  }
+  .auth-welcome-section h1 {
+    font-size: 2.5rem;
+  }
+}
