@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { ManageHeroModal } from "@/components/game/ManageHeroModal";
 import { ItemDetailsModal } from "@/components/game/ItemDetailsModal";
 import { EndGameModal } from "@/components/game/EndGameModal";
-import { characterClasses } from "@/config/characterClasses"; // 1. Importar as classes de personagem
+import { WoundRulesModal } from "@/components/game/WoundRulesModal";
+import { characterClasses } from "@/config/characterClasses";
 
 export function GameDashboard() {
   const { gameState, currentUser, proposeEndGame } = useMultiplayerGame();
@@ -14,6 +15,7 @@ export function GameDashboard() {
   const [editingPlayerId, setEditingPlayerId] = useState(null);
   const editingPlayer = editingPlayerId ? gameState.players[editingPlayerId] : null;
   const [showingItem, setShowingItem] = useState(null);
+  const [showWoundRules, setShowWoundRules] = useState(false);
   
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -25,7 +27,6 @@ export function GameDashboard() {
     setShowingItem(item);
   };
 
-  // 2. Nova função para lidar com a proposta de fim de jogo
   const handleProposeEndGame = () => {
     if (!currentUser || !currentUser.character) return;
 
@@ -49,14 +50,21 @@ export function GameDashboard() {
       <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black p-4 md:p-8">
         <header className="flex justify-between items-center mb-8 max-w-7xl mx-auto">
           <h1 className="text-4xl font-bold text-ethereal-blue">A Aventura Começou!</h1>
-          {/* 3. Botão agora chama a nova função handleProposeEndGame */}
-          <Button 
-            onClick={handleProposeEndGame} 
-            disabled={hasPendingProposal}
-            className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg"
-          >
-            {hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}
-          </Button>
+          <div className="flex gap-3">
+            <Button 
+              onClick={() => setShowWoundRules(true)}
+              className="bg-blood-red hover:bg-red-700 text-white font-bold text-lg"
+            >
+              ⚔️ Regras de Combate
+            </Button>
+            <Button 
+              onClick={handleProposeEndGame} 
+              disabled={hasPendingProposal}
+              className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg"
+            >
+              {hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}
+            </Button>
+          </div>
         </header>
 
         <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -85,6 +93,11 @@ export function GameDashboard() {
       />
       
       <EndGameModal />
+      
+      <WoundRulesModal 
+        isOpen={showWoundRules}
+        onClose={() => setShowWoundRules(false)}
+      />
     </>
   );
 }
