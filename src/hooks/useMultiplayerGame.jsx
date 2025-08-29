@@ -1,522 +1,733 @@
-// src/hooks/useMultiplayerGame.jsx - Sistema Tempo Real CORRIGIDO
-import { createContext, useContext, useEffect, useRef, useCallback } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useLocalStorage } from './useLocalStorage';
-import { characterClasses } from '@/config/characterClasses';
-import { specialTreasures } from '@/config/specialTreasures';
-import { db } from '@/lib/firebase';
-import { collection, addDoc, serverTimestamp, doc, getDoc, setDoc, updateDoc, arrayUnion, onSnapshot, deleteDoc } from 'firebase/firestore';
+import { createContext, useContext, useEffect, useRef, useCallback, useMemo, useState } from "react"
+import { useAuth } from "@/context/AuthContext"
+import { characterClasses } from "@/config/characterClasses"
+import { specialTreasures } from "@/config/specialTreasures"
+import { db } from "@/lib/firebase"
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  deleteDoc,
+} from "firebase/firestore"
 
-const GameContext = createContext();
+const GameContext = createContext(null)
 
 const initialGameState = {
   room: null,
   players: {},
-  gamePhase: 'menu',
-};
+  gamePhase: "menu",
+  connectionError: null,
+}
 
 export function MultiplayerProvider({ children }) {
-  const [gameState, setGameState] = useLocalStorage('dungeonGame', initialGameState);
-  const { currentUser: authUser } = useAuth();
-  
-  // Referencias para cleanup
-  const unsubscribeRef = useRef(null);
-  const isListeningRef = useRef(false);
+  const [gameState, setGameState] = useState(initialGameState)
+  const { currentUser: authUser } = useAuth()
 
-  // VERSÃO CORRIGIDA DO FIREBASE LISTENER
-  const setupRealtimeListener = useCallback((roomId) => {
-    // Limpar listener anterior se existir
-    if (unsubscribeRef.current) {
-      console.log('🔌 Limpando listener anterior');
-      unsubscribeRef.current();
-      unsubscribeRef.current = null;
+  const unsubscribeRoomRef = useRef(null)
+  const isListeningRef = useRef(false)
+  const reconnectTimeoutRef = useRef(null)
+  const reconnectAttemptsRef = useRef(0)
+  const maxReconnectAttempts = 5
+  const currentRoomIdRef = useRef(null)
+  const hasTriedReconnectRef = useRef(false)
+
+  const saveRoomId = useCallback((roomId) => {
+    if (roomId) {
+      localStorage.setItem("currentRoomId", roomId)
+    } else {
+      localStorage.removeItem("currentRoomId")
     }
+  }, [])
 
-    if (!roomId || isListeningRef.current) return;
+  const getSavedRoomId = useCallback(() => {
+    try {
+      return localStorage.getItem("currentRoomId")
+    } catch {
+      return null
+    }
+  }, [])
 
-    console.log('🔄 Configurando listener para sala:', roomId);
-    isListeningRef.current = true;
+  const attemptAutoReconnect = useCallback(async () => {
+    if (!authUser) return
 
-    const roomRef = doc(db, "rooms", roomId);
-    
-    // CONFIGURAÇÃO CORRETA do onSnapshot
-    const unsubscribe = onSnapshot(
-      roomRef,
-      {
-        // CRÍTICO: Incluir metadata changes
-        includeMetadataChanges: true
-      },
-      (docSnap) => {
-        console.log('📨 Snapshot recebido:', {
-          exists: docSnap.exists(),
-          hasPendingWrites: docSnap.metadata.hasPendingWrites,
-          isFromCache: docSnap.metadata.fromCache
-        });
+    const savedRoomId = getSavedRoomId()
+    if (!savedRoomId) return
 
-        if (docSnap.exists()) {
-          const roomData = docSnap.data();
-          console.log('📊 Dados da sala:', roomData);
+    console.log("[v0] Tentando reconectar automaticamente à sala:", savedRoomId)
 
-          // Verificar se há players
-          if (!roomData.players || roomData.players.length === 0) {
-            console.log('🚪 Sala sem jogadores');
-            setGameState(initialGameState);
-            return;
+    try {
+      const roomRef = doc(db, "rooms", savedRoomId)
+      const roomSnap = await getDoc(roomRef)
+
+      if (roomSnap.exists()) {
+        const success = await joinRoom(savedRoomId)
+        if (success) {
+          console.log("[v0] Reconexão automática bem-sucedida")
+          hasTriedReconnectRef.current = true
+        } else {
+          console.log("[v0] Falha na reconexão automática")
+          saveRoomId(null)
+        }
+      } else {
+        console.log("[v0] Sala salva não existe mais")
+        saveRoomId(null)
+      }
+    } catch (error) {
+      console.error("[v0] Erro na reconexão automática:", error)
+      saveRoomId(null)
+    }
+  }, [authUser, getSavedRoomId, saveRoomId])
+
+  useEffect(() => {
+    if (!authUser || !gameState.room?.id) {
+      hasTriedReconnectRef.current = false
+    }
+  }, [authUser, gameState.room?.id])
+
+  useEffect(() => {
+    if (authUser && !gameState.room?.id && !hasTriedReconnectRef.current) {
+      attemptAutoReconnect()
+    }
+  }, [authUser, gameState.room?.id, attemptAutoReconnect])
+
+
+  const setupRealtimeListener = useCallback(
+    (roomId) => {
+      console.log("[v0] Configurando listener para sala:", roomId)
+
+      if (unsubscribeRoomRef.current) {
+        try {
+          unsubscribeRoomRef.current()
+        } catch {}
+        unsubscribeRoomRef.current = null
+      }
+
+      if (!roomId) return
+
+      if (isListeningRef.current && currentRoomIdRef.current === roomId) {
+        console.log("[v0] Listener já ativo para esta sala, ignorando")
+        return
+      }
+
+      isListeningRef.current = true
+      currentRoomIdRef.current = roomId
+
+      const roomRef = doc(db, "rooms", roomId)
+
+      const unsubscribe = onSnapshot(
+        roomRef,
+        { includeMetadataChanges: true },
+        (snap) => {
+          console.log("[v0] Recebida atualização da sala:", snap.exists() ? "dados atualizados" : "sala deletada")
+          reconnectAttemptsRef.current = 0
+
+          if (!snap.exists()) {
+            console.log("[v0] Sala não existe mais, voltando ao menu")
+            saveRoomId(null)
+            setGameState(initialGameState)
+            return
           }
 
-          // Converter players para objeto
-          const playersObject = roomData.players.reduce((acc, player) => {
-            acc[player.id] = player;
-            return acc;
-          }, {});
+          const data = snap.data()
 
-          console.log('👥 Jogadores processados:', playersObject);
+          if (!data || typeof data !== "object") {
+            console.warn("[useMultiplayerGame] Dados da sala corrompidos, ignorando update")
+            return
+          }
 
-          // ATUALIZAÇÃO OTIMIZADA DO ESTADO
-          setGameState(prevState => {
-            const newState = {
-              room: {
-                id: roomId,
-                inviteLink: roomData.inviteLink || prevState.room?.inviteLink || `${window.location.origin}?room=${roomId}`,
-                hostId: roomData.hostId,
-                hostName: roomData.hostName,
-                endGameProposal: roomData.endGameProposal || null
-              },
-              players: playersObject,
-              gamePhase: roomData.gamePhase || 'lobby'
-            };
+          const playersArray = Array.isArray(data.players) ? data.players : []
+          console.log("[v0] Jogadores na sala:", playersArray.length)
 
-            console.log('🔄 Estado atualizado:', newState);
-            return newState;
-          });
-
-        } else {
-          console.log('❌ Documento não existe');
-          setGameState(initialGameState);
-        }
-      },
-      (error) => {
-        console.error('❌ Erro no listener Firebase:', error);
-        console.error('Código do erro:', error.code);
-        console.error('Mensagem:', error.message);
-        
-        // Tentar reconectar em caso de erro de rede
-        if (error.code === 'unavailable') {
-          console.log('🔄 Tentando reconectar em 5s...');
-          setTimeout(() => {
-            if (roomId) {
-              isListeningRef.current = false;
-              setupRealtimeListener(roomId);
+          const playersObj = playersArray.reduce((acc, p) => {
+            if (p && p.id) {
+              acc[p.id] = p
             }
-          }, 5000);
-        }
-      }
-    );
+            return acc
+          }, {})
 
-    unsubscribeRef.current = unsubscribe;
-  }, [setGameState]);
+          setGameState((prev) => ({
+            room: {
+              id: roomId,
+              inviteLink: data.inviteLink || prev.room?.inviteLink || `${window.location.origin}?room=${roomId}`,
+              hostId: data.hostId,
+              hostName: data.hostName,
+              endGameProposal: data.endGameProposal || null,
+            },
+            players: playersObj,
+            gamePhase: data.gamePhase || prev.gamePhase || "lobby",
+            connectionError: null,
+          }))
+        },
+        (error) => {
+          console.error("[useMultiplayerGame] onSnapshot error:", error?.code || error, error?.message || "")
 
-  // EFFECT PARA GERENCIAR O LISTENER
+          if (error?.code === "unavailable" || error?.code === "permission-denied") {
+            isListeningRef.current = false
+            currentRoomIdRef.current = null
+
+            if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+              reconnectAttemptsRef.current++
+              const delay = Math.min(1000 * reconnectAttemptsRef.current, 10000)
+
+              console.log(
+                `[useMultiplayerGame] Tentando reconectar em ${delay}ms (tentativa ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`,
+              )
+
+              reconnectTimeoutRef.current = setTimeout(() => {
+                setupRealtimeListener(roomId)
+              }, delay)
+            } else {
+              console.error("[useMultiplayerGame] Máximo de tentativas de reconexão atingido")
+              setGameState((prev) => ({
+                ...prev,
+                connectionError: "Problema de conexão. Verifique sua internet e tente novamente.",
+              }))
+            }
+          }
+        },
+      )
+
+      unsubscribeRoomRef.current = unsubscribe
+    },
+    [setGameState, saveRoomId],
+  )
+
   useEffect(() => {
-    const roomId = gameState.room?.id;
-    
-    if (roomId && authUser) {
-      setupRealtimeListener(roomId);
+    const roomId = gameState.room?.id
+    console.log("[v0] useEffect - roomId:", roomId, "authUser:", !!authUser)
+
+    if (authUser && roomId) {
+      setupRealtimeListener(roomId)
     } else {
-      // Limpar listener se não há sala ou usuário
-      if (unsubscribeRef.current) {
-        console.log('🧹 Limpando listener (sem sala/usuário)');
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-        isListeningRef.current = false;
+      console.log("[v0] Encerrando listeners - sem sala ou usuário")
+      if (unsubscribeRoomRef.current) {
+        try {
+          unsubscribeRoomRef.current()
+        } catch {}
+        unsubscribeRoomRef.current = null
       }
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      isListeningRef.current = false
+      currentRoomIdRef.current = null
+      reconnectAttemptsRef.current = 0
     }
 
-    // Cleanup quando component desmonta
     return () => {
-      if (unsubscribeRef.current) {
-        console.log('🧹 Cleanup final do listener');
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-        isListeningRef.current = false;
+      if (unsubscribeRoomRef.current) {
+        try {
+          unsubscribeRoomRef.current()
+        } catch {}
+        unsubscribeRoomRef.current = null
       }
-    };
-  }, [gameState.room?.id, authUser, setupRealtimeListener]);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current)
+        reconnectTimeoutRef.current = null
+      }
+      isListeningRef.current = false
+      currentRoomIdRef.current = null
+      reconnectAttemptsRef.current = 0
+    }
+  }, [authUser, gameState.room?.id, setupRealtimeListener])
 
-  // FUNÇÃO DE TESTE DE CONECTIVIDADE
+  // ————————————————————————————————————————
+  // Utilitários
+  // ————————————————————————————————————————
   const testFirebaseConnection = async () => {
     try {
-      console.log('🧪 Testando conexão Firebase...');
-      const testDoc = doc(db, 'test', 'connectivity');
-      await getDoc(testDoc);
-      console.log('✅ Firebase conectado com sucesso');
-      return true;
-    } catch (error) {
-      console.error('❌ Erro de conectividade Firebase:', error);
-      return false;
+      const testRef = doc(db, "test", "connectivity")
+      await getDoc(testRef)
+      setGameState((prev) => {
+        const { connectionError, ...rest } = prev
+        return rest
+      })
+      return true
+    } catch (e) {
+      console.error("[useMultiplayerGame] Firebase connectivity error:", e)
+      return false
     }
-  };
+  }
 
-  const createRoom = async () => {
-    if (!authUser) {
-      console.error("❌ Usuário não autenticado");
-      return;
-    }
-
-    // Testar conectividade primeiro
-    const isConnected = await testFirebaseConnection();
-    if (!isConnected) {
-      alert("Erro de conexão com o Firebase. Verifique sua internet.");
-      return;
-    }
-
-    console.log('🏗️ Criando nova sala...');
-
-    let playerName = authUser.email;
+  const updateRoomData = async (updates) => {
+    const roomId = gameState.room?.id
+    if (!roomId) return false
     try {
-        const userDocRef = doc(db, 'users', authUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data().displayName) {
-          playerName = userDocSnap.data().displayName;
+      const roomRef = doc(db, "rooms", roomId)
+      let attempts = 0
+      const maxAttempts = 3
+
+      while (attempts < maxAttempts) {
+        try {
+          await updateDoc(roomRef, { ...updates, lastUpdated: serverTimestamp() })
+          return true
+        } catch (error) {
+          attempts++
+          if (attempts >= maxAttempts) throw error
+
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempts))
         }
-    } catch (error) {
-        console.error("⚠️ Erro ao buscar nome:", error);
+      }
+    } catch (e) {
+      console.error("[useMultiplayerGame] updateRoomData error:", e)
+      return false
+    }
+  }
+
+  const readPlayersArray = async (roomRef) => {
+    const snap = await getDoc(roomRef)
+    if (!snap.exists()) return []
+    const data = snap.data()
+    return Array.isArray(data.players) ? data.players : []
+  }
+
+  // ————————————————————————————————————————
+  // Criação / Entrada em Sala
+  // ————————————————————————————————————————
+  const createRoom = async () => {
+    if (!authUser) return
+
+    const ok = await testFirebaseConnection()
+    if (!ok) {
+      alert("Erro de conexão com o Firebase. Verifique sua internet.")
+      return
     }
 
-    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const inviteLink = `${window.location.origin}?room=${roomId}`;
-    
-    const initialPlayer = {
-      id: authUser.uid, 
-      name: playerName, 
-      color: "#" + Math.floor(Math.random()*16777215).toString(16),
-      isHost: true, 
-      ready: false, 
-      character: null,
-      createdAt: new Date().toISOString()
-    };
+    let playerName = authUser.email
+    try {
+      const userDocRef = doc(db, "users", authUser.uid)
+      const userDocSnap = await getDoc(userDocRef)
+      if (userDocSnap.exists() && userDocSnap.data().displayName) {
+        playerName = userDocSnap.data().displayName
+      }
+    } catch {
+    }
 
-    const roomData = { 
-      id: roomId, 
-      inviteLink, 
-      hostId: initialPlayer.id, 
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const inviteLink = `${window.location.origin}?room=${roomId}`
+
+    const initialPlayer = {
+      id: authUser.uid,
+      name: playerName,
+      color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+      isHost: true,
+      ready: false,
+      character: null,
+      createdAt: new Date().toISOString(),
+      gold: 0,
+      isWounded: false,
+      isGoldHidden: false,
+      inventory: [],
+    }
+
+    const roomData = {
+      id: roomId,
+      inviteLink,
+      hostId: initialPlayer.id,
       hostName: initialPlayer.name,
-      createdAt: serverTimestamp(), 
-      players: [initialPlayer], 
-      gamePhase: 'lobby',
-      lastUpdated: serverTimestamp()
-    };
+      createdAt: serverTimestamp(),
+      lastUpdated: serverTimestamp(),
+      players: [initialPlayer],
+      gamePhase: "lobby",
+    }
 
     try {
-      // USAR setDoc ao invés de addDoc para garantir ID específico
-      await setDoc(doc(db, "rooms", roomId), roomData);
-      
-      console.log('✅ Sala criada no Firebase:', roomId);
+      await setDoc(doc(db, "rooms", roomId), roomData)
 
-      // Atualizar estado local APÓS sucesso no Firebase
-      setGameState({ 
-        room: { 
-          id: roomId, 
-          inviteLink, 
-          hostId: initialPlayer.id, 
-          hostName: initialPlayer.name 
-        }, 
-        players: { [initialPlayer.id]: initialPlayer }, 
-        gamePhase: 'lobby'
-      });
+      saveRoomId(roomId)
 
-      console.log('✅ Estado local atualizado');
-
-    } catch (error) {
-      console.error('❌ Erro ao criar sala:', error);
-      alert("Erro ao criar sala. Tente novamente.");
+      setGameState({
+        room: { id: roomId, inviteLink, hostId: initialPlayer.id, hostName: initialPlayer.name },
+        players: { [initialPlayer.id]: initialPlayer },
+        gamePhase: "lobby",
+        connectionError: null,
+      })
+    } catch (e) {
+      console.error("[useMultiplayerGame] createRoom error:", e)
+      alert("Erro ao criar sala. Tente novamente.")
     }
-  };
+  }
 
   const joinRoom = async (roomId) => {
-    if (!authUser) {
-      console.error("❌ Usuário não autenticado");
-      return false;
-    }
+    if (!authUser) return false
 
-    console.log('🚪 Tentando entrar na sala:', roomId);
-
-    const roomRef = doc(db, "rooms", roomId);
+    console.log("[v0] Tentando entrar na sala:", roomId)
+    const roomRef = doc(db, "rooms", roomId)
     try {
-      const roomSnap = await getDoc(roomRef);
-      if (!roomSnap.exists()) { 
-        console.log('❌ Sala não encontrada');
-        return false; 
+      const roomSnap = await getDoc(roomRef)
+      if (!roomSnap.exists()) {
+        console.log("[v0] Sala não existe")
+        return false
       }
 
-      const roomData = roomSnap.data();
-      let playersList = roomData.players || [];
+      const data = roomSnap.data()
+      const playersList = Array.isArray(data.players) ? [...data.players] : []
 
-      console.log('👥 Jogadores atuais:', playersList);
+      const idx = playersList.findIndex((p) => p.id === authUser.uid)
+      console.log("[v0] Jogador já na sala?", idx !== -1)
 
-      // Verificar se já está na sala
-      const existingPlayerIndex = playersList.findIndex(p => p.id === authUser.uid);
-      
-      if (existingPlayerIndex === -1) {
-        // Jogador não está na sala
-        if (playersList.length >= 6) { 
-          console.log('❌ Sala lotada');
-          return false; 
+      if (idx === -1) {
+        if (playersList.length >= 6) {
+          console.log("[v0] Sala lotada")
+          return false
         }
 
-        let playerName = authUser.email;
+        let playerName = authUser.email
         try {
-          const userDocRef = doc(db, 'users', authUser.uid);
-          const userDocSnap = await getDoc(userDocRef);
+          const userDocRef = doc(db, "users", authUser.uid)
+          const userDocSnap = await getDoc(userDocRef)
           if (userDocSnap.exists() && userDocSnap.data().displayName) {
-            playerName = userDocSnap.data().displayName;
+            playerName = userDocSnap.data().displayName
           }
-        } catch (error) {
-          console.log("⚠️ Usando email como nome");
+        } catch {
         }
 
         const newPlayer = {
-          id: authUser.uid, 
-          name: playerName, 
-          color: "#" + Math.floor(Math.random()*16777215).toString(16),
-          isHost: false, 
-          ready: false, 
+          id: authUser.uid,
+          name: playerName,
+          color: "#" + Math.floor(Math.random() * 16777215).toString(16),
+          isHost: false,
+          ready: false,
           character: null,
-          joinedAt: new Date().toISOString()
-        };
+          joinedAt: new Date().toISOString(),
+          gold: 0,
+          isWounded: false,
+          isGoldHidden: false,
+          inventory: [],
+        }
 
-        // ATUALIZAR no Firebase PRIMEIRO
-        playersList.push(newPlayer);
-        await updateDoc(roomRef, { 
-          players: playersList,
-          lastUpdated: serverTimestamp()
-        });
-
-        console.log('✅ Jogador adicionado ao Firebase');
-      } else {
-        console.log('ℹ️ Jogador já estava na sala');
+        playersList.push(newPlayer)
+        console.log("[v0] Adicionando jogador à sala, total:", playersList.length)
+        await updateDoc(roomRef, { players: playersList, lastUpdated: serverTimestamp() })
       }
 
-      // Atualizar estado local
-      const playersObject = playersList.reduce((acc, player) => {
-        acc[player.id] = player;
-        return acc;
-      }, {});
+      saveRoomId(roomId)
 
+      const playersObj = playersList.reduce((acc, p) => {
+        acc[p.id] = p
+        return acc
+      }, {})
+
+      console.log("[v0] Definindo estado local da sala")
       setGameState({
-        room: { 
-          id: roomData.id, 
-          inviteLink: roomData.inviteLink, 
-          hostId: roomData.hostId, 
-          hostName: roomData.hostName 
-        },
-        players: playersObject,
-        gamePhase: roomData.gamePhase || 'lobby'
-      });
+        room: { id: data.id, inviteLink: data.inviteLink, hostId: data.hostId, hostName: data.hostName },
+        players: playersObj,
+        gamePhase: data.gamePhase || "lobby",
+        connectionError: null,
+      })
 
-      console.log('✅ Entrou na sala com sucesso');
-      return true;
-
-    } catch (error) { 
-      console.error("❌ Erro ao entrar na sala:", error); 
-      return false; 
+      return true
+    } catch (e) {
+      console.error("[useMultiplayerGame] joinRoom error:", e)
+      return false
     }
-  };
+  }
 
-  // OTIMIZAÇÃO: Usar updateDoc ao invés de buscar + atualizar
-  const updateRoomData = async (updates) => {
-    if (!gameState.room?.id) return false;
-    
-    try {
-      const roomRef = doc(db, "rooms", gameState.room.id);
-      await updateDoc(roomRef, {
-        ...updates,
-        lastUpdated: serverTimestamp()
-      });
-      console.log('✅ Sala atualizada:', updates);
-      return true;
-    } catch (error) {
-      console.error('❌ Erro ao atualizar sala:', error);
-      return false;
-    }
-  };
+  // ————————————————————————————————————————
+  // Fases de jogo
+  // ————————————————————————————————————————
+  const goToJoinRoom = () => setGameState((s) => ({ ...s, gamePhase: "joining" }))
+  const goToProfile = () => setGameState((s) => ({ ...s, gamePhase: "profile" }))
 
-  const selectCharacterForPlayer = async (playerId, characterData) => {
-    console.log('👤 Selecionando personagem:', { playerId, characterData });
-    
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    try {
-      const roomSnap = await getDoc(roomRef);
-      if (!roomSnap.exists()) return;
-      
-      const currentPlayers = roomSnap.data().players;
-      const updatedPlayers = currentPlayers.map(p => 
-        p.id === playerId 
-          ? { ...p, character: characterData, ready: true, updatedAt: new Date().toISOString() }
-          : p
-      );
-      
-      await updateDoc(roomRef, { 
-        players: updatedPlayers,
-        lastUpdated: serverTimestamp()
-      });
-      
-      console.log('✅ Personagem selecionado no Firebase');
-    } catch (error) { 
-      console.error("❌ Erro ao selecionar personagem:", error); 
-    }
-  };
+  const startGameSelection = async () => {
+    await updateRoomData({ gamePhase: "selection" })
+  }
 
-  // OUTRAS FUNÇÕES (simplificadas para não quebrar)
-  const goToJoinRoom = () => setGameState(prev => ({ ...prev, gamePhase: 'joining' }));
-  const goToProfile = () => setGameState(prev => ({ ...prev, gamePhase: 'profile' }));
-  
-  const startGameSelection = () => updateRoomData({ gamePhase: 'selection' });
   const startGame = async () => {
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const roomSnap = await getDoc(roomRef);
-    const currentPlayers = roomSnap.data().players;
-    const playersWithStats = currentPlayers.map(player => ({
-        ...player, gold: 0, isWounded: false, isGoldHidden: false, inventory: [],
-    }));
-    await updateDoc(roomRef, { players: playersWithStats, gamePhase: 'playing' });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId) return
+
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const initialized = players.map((p) => ({
+      ...p,
+      gold: 0,
+      isWounded: false,
+      isGoldHidden: false,
+      inventory: Array.isArray(p.inventory) ? p.inventory : [],
+    }))
+
+    await updateDoc(roomRef, { players: initialized, gamePhase: "playing", lastUpdated: serverTimestamp() })
+  }
+
+  // ————————————————————————————————————————
+  // Ações de jogador (sempre persistindo no Firestore)
+  // ————————————————————————————————————————
+  const selectCharacterForPlayer = async (playerId, characterData) => {
+    const roomId = gameState.room?.id
+    if (!roomId) return
+
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const updated = players.map((p) =>
+      p.id === playerId
+        ? {
+            ...p,
+            character: characterData,
+            ready: true,
+            updatedAt: new Date().toISOString(),
+          }
+        : p,
+    )
+
+    await updateRoomData({ players: updated })
+  }
 
   const unselectCharacter = async (playerId) => {
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const roomSnap = await getDoc(roomRef);
-    const currentPlayers = roomSnap.data().players;
-    const updatedPlayers = currentPlayers.map(p => 
-      p.id === playerId ? { ...p, character: null, ready: false } : p
-    );
-    await updateDoc(roomRef, { players: updatedPlayers });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId) return
+
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const updated = players.map((p) => (p.id === playerId ? { ...p, character: null, ready: false } : p))
+    await updateDoc(roomRef, { players: updated, lastUpdated: serverTimestamp() })
+  }
 
   const updatePlayerStats = async (playerId, newStats) => {
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const roomSnap = await getDoc(roomRef);
-    const currentPlayers = roomSnap.data().players;
-    const updatedPlayers = currentPlayers.map(player => 
-        player.id === playerId ? { ...player, ...newStats } : player
-    );
-    await updateDoc(roomRef, { players: updatedPlayers });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId) return
+
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const updated = players.map((p) =>
+      p.id === playerId
+        ? {
+            ...p,
+            ...newStats,
+            lastStatsUpdate: new Date().toISOString(),
+          }
+        : p,
+    )
+
+    await updateRoomData({ players: updated })
+  }
 
   const addItemToInventory = async (playerId, itemId) => {
-    const itemToAdd = specialTreasures.find(item => item.id === itemId);
-    if (!itemToAdd) return;
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const roomSnap = await getDoc(roomRef);
-    const currentPlayers = roomSnap.data().players;
-    const updatedPlayers = currentPlayers.map(player => {
-        if (player.id === playerId) {
-            const newInventory = [...(player.inventory || []), itemToAdd];
-            return { ...player, inventory: newInventory };
-        }
-        return player;
-    });
-    await updateDoc(roomRef, { players: updatedPlayers });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId) return
+
+    const item = specialTreasures.find((i) => i.id === itemId)
+    if (!item) return
+
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const updated = players.map((p) => {
+      if (p.id !== playerId) return p
+      const inv = Array.isArray(p.inventory) ? p.inventory : []
+      return { ...p, inventory: [...inv, item] }
+    })
+
+    await updateDoc(roomRef, { players: updated, lastUpdated: serverTimestamp() })
+  }
 
   const removeItemFromInventory = async (playerId, itemIndex) => {
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const roomSnap = await getDoc(roomRef);
-    const currentPlayers = roomSnap.data().players;
-    const updatedPlayers = currentPlayers.map(player => {
-        if (player.id === playerId) {
-            const newInventory = player.inventory.filter((_, index) => index !== itemIndex);
-            return { ...player, inventory: newInventory };
-        }
-        return player;
-    });
-    await updateDoc(roomRef, { players: updatedPlayers });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId) return
 
+    const roomRef = doc(db, "rooms", roomId)
+    const players = await readPlayersArray(roomRef)
+
+    const updated = players.map((p) => {
+      if (p.id !== playerId) return p
+      const inv = Array.isArray(p.inventory) ? p.inventory : []
+      return { ...p, inventory: inv.filter((_, idx) => idx !== itemIndex) }
+    })
+
+    await updateDoc(roomRef, { players: updated, lastUpdated: serverTimestamp() })
+  }
+
+  // ————————————————————————————————————————
+  // Proposta / votação de fim de jogo
+  // ————————————————————————————————————————
   const proposeEndGame = async () => {
-    const proposingPlayer = gameState.players[authUser.uid];
+    const me = authUser ? gameState.players[authUser.uid] : null
+    if (!me) return
     const proposal = {
-      proposerId: authUser.uid,
-      proposerName: proposingPlayer.name,
-      votes: { [authUser.uid]: 'proposer' },
-      status: 'pending'
-    };
-    await updateRoomData({ endGameProposal: proposal });
-  };
+      proposerId: me.id,
+      proposerName: me.name,
+      votes: { [me.id]: "proposer" },
+      status: "pending",
+      createdAt: serverTimestamp(),
+    }
+    await updateRoomData({ endGameProposal: proposal })
+  }
 
   const voteOnEndGame = async (vote) => {
-    const roomRef = doc(db, "rooms", gameState.room.id);
-    const votePath = `endGameProposal.votes.${authUser.uid}`;
-    await updateDoc(roomRef, { [votePath]: vote });
-  };
+    const roomId = gameState.room?.id
+    if (!roomId || !authUser) return
+
+    const path = `endGameProposal.votes.${authUser.uid}`
+    await updateDoc(doc(db, "rooms", roomId), { [path]: vote, lastUpdated: serverTimestamp() })
+  }
 
   const endGameAndSaveHistory = async () => {
-    // [manter código original]
-    const { players, room } = gameState;
-    const playerList = Object.values(players);
-    if (playerList.length === 0) return;
-    
-    let winner = null;
-    const proposer = players[room.endGameProposal.proposerId];
-    const proposerClassData = characterClasses.find(c => c.name === proposer.character.className);
-    if (proposer.gold >= proposerClassData.goldTarget) {
-        winner = proposer;
-    } else {
-        winner = playerList.reduce((prev, current) => (prev.gold > current.gold) ? prev : current);
+    const { players, room } = gameState
+    const playerList = Object.values(players)
+    if (playerList.length === 0) return
+
+    const proposer = room?.endGameProposal ? players[room.endGameProposal.proposerId] : null
+    let winner = null
+
+    if (proposer?.character?.className) {
+      const proposerClass = characterClasses.find((c) => c.name === proposer.character.className)
+      if (proposerClass && (proposer.gold ?? 0) >= proposerClass.goldTarget) {
+        winner = proposer
+      }
     }
-    
-    const playersSnapshot = playerList.map(p => ({
-      userId: p.id, playerName: p.name, characterName: p.character.name,
-      characterClass: p.character.className, gold: p.gold,
-      inventory: p.inventory.map(item => ({ id: item.id, name: item.name })),
-    }));
+    if (!winner) {
+      winner = playerList.reduce((a, b) => (Number(a.gold || 0) > Number(b.gold || 0) ? a : b))
+    }
+
+    const playersSnapshot = playerList.map((p) => ({
+      userId: p.id,
+      playerName: p.name,
+      characterName: p.character?.name || null,
+      characterClass: p.character?.className || null,
+      gold: Number(p.gold || 0),
+      inventory: (p.inventory || []).map((i) => ({ id: i.id, name: i.name })),
+    }))
 
     try {
       await addDoc(collection(db, "matches"), {
-        roomId: room.id, winnerId: winner.id, winnerName: winner.name,
-        endedAt: serverTimestamp(), playerCount: playerList.length, 
-        players: playersSnapshot, playerIds: playerList.map(p => p.id),
-      });
-      await deleteDoc(doc(db, "rooms", room.id));
-    } catch (error) { console.error("Erro ao finalizar:", error); }
-    
-    setGameState({ ...initialGameState, gamePhase: 'menu' });
-  };
-
-  const backToMenu = async () => {
-    if (!authUser || !gameState.room?.id) {
-      setGameState(initialGameState);
-      return;
+        roomId: room.id,
+        winnerId: winner.id,
+        winnerName: winner.name,
+        endedAt: serverTimestamp(),
+        playerCount: playerList.length,
+        players: playersSnapshot,
+        playerIds: playerList.map((p) => p.id),
+      })
+      await deleteDoc(doc(db, "rooms", room.id))
+    } catch (e) {
+      console.error("[useMultiplayerGame] endGameAndSaveHistory error:", e)
     }
-    
-    const roomRef = doc(db, "rooms", gameState.room.id);
+
+    setGameState({ ...initialGameState, gamePhase: "menu" })
+  }
+
+  // ————————————————————————————————————————
+  // Sair/voltar ao menu (limpa presença e sala se for o último)
+  // ————————————————————————————————————————
+  const backToMenu = async () => {
+    const roomId = gameState.room?.id
+    if (!authUser || !roomId) {
+      saveRoomId(null)
+      hasTriedReconnectRef.current = false
+      setGameState(initialGameState)
+      return
+    }
+
     try {
-      const roomSnap = await getDoc(roomRef);
-      if (roomSnap.exists()) {
-        const currentPlayers = roomSnap.data().players;
-        const updatedPlayers = currentPlayers.filter(p => p.id !== authUser.uid);
-        if (updatedPlayers.length === 0) {
-          await deleteDoc(roomRef);
-        } else {
-          await updateDoc(roomRef, { players: updatedPlayers });
-        }
+      const roomRef = doc(db, "rooms", roomId)
+      const players = await readPlayersArray(roomRef)
+      const updated = players.filter((p) => p.id !== authUser.uid)
+
+      if (updated.length === 0) {
+        await deleteDoc(roomRef)
+      } else {
+        await updateDoc(roomRef, { players: updated, lastUpdated: serverTimestamp() })
       }
-    } catch (error) { console.error("Erro ao sair:", error); }
-    
-    setGameState(initialGameState);
-  };
+    } catch (e) {
+      console.error("[useMultiplayerGame] backToMenu error:", e)
+    }
 
-  const value = { 
-    gameState, setGameState, 
-    currentUser: authUser ? gameState.players[authUser.uid] : null, 
-    createRoom, joinRoom, goToJoinRoom, startGameSelection, startGame, 
-    selectCharacterForPlayer, unselectCharacter, updatePlayerStats, 
-    addItemToInventory, removeItemFromInventory, endGameAndSaveHistory, 
-    goToProfile, backToMenu, proposeEndGame, voteOnEndGame, testFirebaseConnection
-  };
+    saveRoomId(null)
+    hasTriedReconnectRef.current = false
+    setGameState(initialGameState)
+  }
 
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  // ————————————————————————————————————————
+  // Função para forçar sincronização manual
+  // ————————————————————————————————————————
+  const forceSyncRoom = useCallback(async () => {
+    const roomId = gameState.room?.id
+    if (!roomId) return false
+
+    try {
+      const roomRef = doc(db, "rooms", roomId)
+      const snap = await getDoc(roomRef)
+
+      if (snap.exists()) {
+        const data = snap.data()
+        const playersArray = Array.isArray(data.players) ? data.players : []
+        const playersObj = playersArray.reduce((acc, p) => {
+          if (p && p.id) {
+            acc[p.id] = p
+          }
+          return acc
+        }, {})
+
+        setGameState((prev) => ({
+          ...prev,
+          room: {
+            ...prev.room,
+            hostId: data.hostId,
+            hostName: data.hostName,
+            endGameProposal: data.endGameProposal || null,
+          },
+          players: playersObj,
+          gamePhase: data.gamePhase || prev.gamePhase || "lobby",
+        }))
+
+        return true
+      }
+      return false
+    } catch (e) {
+      console.error("[useMultiplayerGame] forceSyncRoom error:", e)
+      return false
+    }
+  }, [gameState.room?.id, setGameState])
+
+  // ————————————————————————————————————————
+  // Context value
+  // ————————————————————————————————————————
+  const value = useMemo(
+    () => ({
+      gameState,
+      setGameState,
+      currentUser: authUser ? gameState.players[authUser.uid] : null,
+
+      goToJoinRoom,
+      goToProfile,
+      backToMenu,
+
+      createRoom,
+      joinRoom,
+
+      startGameSelection,
+      startGame,
+
+      selectCharacterForPlayer,
+      unselectCharacter,
+      updatePlayerStats,
+      addItemToInventory,
+      removeItemFromInventory,
+
+      proposeEndGame,
+      voteOnEndGame,
+      endGameAndSaveHistory,
+
+      testFirebaseConnection,
+      forceSyncRoom,
+
+      isConnected: !gameState.connectionError,
+      connectionError: gameState.connectionError,
+    }),
+    [gameState, authUser, forceSyncRoom],
+  )
+
+  return <GameContext.Provider value={value}>{children}</GameContext.Provider>
 }
 
-export const useMultiplayerGame = () => { 
-  return useContext(GameContext); 
-};
+export const useMultiplayerGame = () => useContext(GameContext)
