@@ -7,7 +7,8 @@ export function AuthScreen() {
   const [isLoginMode, setIsLoginMode] = useState(true);
 
   return (
-    <div className="auth-container">
+    // Removido 'min-h-screen' daqui também
+    <div className="h-full w-full flex items-center justify-center bg-transparent p-4">
       <div className="auth-card">
         <div className="auth-welcome-section">
           <h1>Bem-vindo!</h1>

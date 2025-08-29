@@ -92,7 +92,7 @@ export function PlayerProfile() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-transparent p-4 md:p-8">
+    <div className="h-full w-full flex items-center justify-center bg-transparent p-4 md:p-8">
       <div className="max-w-7xl mx-auto w-full">
         <header className="flex justify-between items-center mb-8">
           <div>

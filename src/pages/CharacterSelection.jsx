@@ -44,7 +44,7 @@ export function CharacterSelection() {
   const isHost = players[currentUser.id]?.isHost;
 
   return (
-    <div className="min-h-screen w-full bg-transparent safe-area-top safe-area-left safe-area-right container-mobile-safe">
+    <div className="h-full w-full bg-transparent safe-area-top safe-area-left safe-area-right container-mobile-safe">
       <div className="max-w-7xl mx-auto py-4 sm:py-8 pb-24 sm:pb-8">
         <div className="hidden sm:flex sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
           <div className="text-center sm:text-left flex-grow">

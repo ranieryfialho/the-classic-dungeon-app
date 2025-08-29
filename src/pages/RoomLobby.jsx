@@ -40,13 +40,13 @@ export function RoomLobby() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-transparent safe-area-top safe-area-left safe-area-right">
+    <div className="h-full w-full bg-transparent safe-area-top safe-area-left safe-area-right">
       {copied && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg z-50 animate-in fade-in-0 slide-in-from-top-4 duration-300">
           {copied}
         </div>
       )}
-      <div className="container-mobile-safe py-4 sm:py-8 flex items-center justify-center min-h-screen">
+      <div className="container-mobile-safe py-4 sm:py-8 flex items-center justify-center h-full">
         <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6 pb-24 sm:pb-0">
           <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6">
@@ -102,12 +102,6 @@ export function RoomLobby() {
               </div>
             </CardContent>
           </Card>
-          <div className="hidden sm:block text-center space-y-3 sm:space-y-4">
-            <Button onClick={startGameSelection} size="lg" disabled={playerList.length < 2} className="bg-crystal-blue hover:bg-frost-blue text-white font-bold text-base sm:text-xl py-4 sm:py-6 px-6 sm:px-10 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto min-h-[52px] sm:min-h-[60px]">
-              🎭 Iniciar Seleção de Personagens
-            </Button>
-            <p className="text-xs sm:text-sm text-stone-light">É necessário no mínimo 2 jogadores para começar.</p>
-          </div>
         </div>
       </div>
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>

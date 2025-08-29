@@ -14,7 +14,9 @@ const QrScannerComponent = ({ onScanSuccess }) => {
     scanner.render(onScanSuccess, (error) => {});
     return () => {
       if (scanner && scanner.getState() === 2) {
-        scanner.clear().catch(err => console.error("Falha ao limpar o scanner.", err));
+         scanner.clear().catch(err => {
+            console.error("Falha ao limpar o scanner.", err);
+        });
       }
     };
   }, [onScanSuccess]);
@@ -87,7 +89,7 @@ export function JoinRoom() {
 
   return (
     <>
-      <div className="min-h-screen w-full flex items-center justify-center bg-transparent safe-top safe-bottom safe-left safe-right">
+      <div className="h-full w-full flex items-center justify-center bg-transparent safe-top safe-bottom safe-left safe-right">
         <div className="container-mobile-safe py-4 sm:py-8">
           <Card className="w-full max-w-sm sm:max-w-md mx-auto bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="p-4 sm:p-6">

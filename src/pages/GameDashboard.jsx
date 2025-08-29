@@ -42,7 +42,7 @@ export function GameDashboard() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-transparent safe-area-top safe-area-left safe-area-right">
+      <div className="h-full w-full bg-transparent safe-area-top safe-area-left safe-area-right">
         <header className="hidden sm:block container-mobile-safe py-4 sm:py-8 mb-4 sm:mb-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center">
