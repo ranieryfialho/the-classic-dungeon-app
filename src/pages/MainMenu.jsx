@@ -1,4 +1,8 @@
+// src/pages/MainMenu.jsx
+
 import { useState, useEffect } from 'react';
+// Importações de ícones da biblioteca lucide-react (AGORA CORRIGIDO E VERIFICADO)
+import { Swords, DoorOpen, ScrollText, LogOut, Shield } from 'lucide-react'; 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
@@ -55,7 +59,9 @@ export function MainMenu() {
           <Card className="w-full max-w-sm sm:max-w-md mx-auto bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-center text-2xl sm:text-3xl font-bold text-ethereal-blue drop-shadow-[0_2px_8px_rgba(147,197,253,0.4)]">
-                <div className="mb-2">🏰</div>
+                <div className="mb-2 flex justify-center">
+                  <Shield size={48} />
+                </div>
                 <div className="text-xl sm:text-2xl leading-tight">The Classic Dungeon</div>
               </CardTitle>
             </CardHeader>
@@ -68,10 +74,8 @@ export function MainMenu() {
                   size="lg" 
                   className="bg-arcane-blue hover:bg-crystal-blue text-white font-bold text-base sm:text-lg border-frost-blue/50 hover:text-white w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200"
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    <span>🆕</span>
-                    <span>Criar Nova Sala</span>
-                  </span>
+                  <Swords />
+                  <span>Criar Nova Sala</span>
                 </Button>
 
                 <Button 
@@ -80,10 +84,8 @@ export function MainMenu() {
                   size="lg" 
                   className="bg-weathered-gray hover:bg-stone-light text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200"
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    <span>🚪</span>
-                    <span>Entrar em uma Sala</span>
-                  </span>
+                  <DoorOpen />
+                  <span>Entrar em uma Sala</span>
                 </Button>
 
                 <Button 
@@ -92,11 +94,9 @@ export function MainMenu() {
                   size="lg" 
                   className="bg-void-purple/80 hover:bg-void-purple text-white hover:text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200"
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    <span>👤</span>
-                    <span className="hidden sm:inline">Ver Perfil e Histórico</span>
-                    <span className="sm:hidden">Perfil e Histórico</span>
-                  </span>
+                  <ScrollText />
+                  <span className="hidden sm:inline">Ver Perfil e Histórico</span>
+                  <span className="sm:hidden">Perfil e Histórico</span>
                 </Button>
 
                 <Button 
@@ -105,10 +105,8 @@ export function MainMenu() {
                   size="lg" 
                   className="font-bold text-base sm:text-lg w-full min-h-[48px] sm:min-h-[52px] mt-4 sm:mt-6 transition-all duration-200"
                 >
-                  <span className="flex items-center justify-center gap-2">
-                    <span>🚪</span>
-                    <span>Sair</span>
-                  </span>
+                  <LogOut />
+                  <span>Sair</span>
                 </Button>
               </div>
             </CardContent>
