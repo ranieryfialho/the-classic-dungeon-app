@@ -15,6 +15,9 @@ import Footer from "@/components/Footer";
 function App() {
   const { currentUser } = useAuth();
   const { gameState, joinRoom } = useMultiplayerGame();
+  const { gamePhase } = gameState;
+  const phasesWithMobileBar = ['lobby', 'selection', 'playing'];
+  const hasMobileBar = phasesWithMobileBar.includes(gamePhase);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -48,7 +51,7 @@ function App() {
         {currentUser ? renderGameScreen() : <AuthPage />}
       </main>
 
-      <Footer />
+      <Footer className={hasMobileBar ? 'hidden sm:block' : ''} />
     </div>
   );
 }

@@ -1,9 +1,10 @@
 import React from 'react';
-import { ScrollText, Github } from 'lucide-react'; 
+import { ScrollText, Github } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-function Footer() {
+function Footer({ className }) {
   return (
-    <footer className="relative z-20 w-full py-3 text-center bg-stone-charcoal/30 border-t border-stone-light/10 mt-auto">
+    <footer className={cn("relative z-20 w-full py-3 text-center bg-stone-charcoal/30 border-t border-stone-light/10", className)}>
       <p className="text-sm text-stone-light flex items-center justify-center gap-2">
         <ScrollText size={16} className="text-stone-light" />
         <span>Forjado por</span>
