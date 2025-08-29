@@ -244,9 +244,9 @@ export function HeroStatusCard({
       </Card>
 
       <Dialog open={showWoundModal} onOpenChange={setShowWoundModal}>
-        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-[90vw] sm:max-w-md lg:max-w-lg shadow-2xl mx-4">
-          <DialogHeader className="text-center pb-2">
-            <DialogTitle className="text-xl sm:text-2xl font-bold text-blood-red flex items-center justify-center gap-2">
+        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white w-[95vw] max-w-[400px] sm:max-w-md lg:max-w-lg h-[80vh] max-h-[600px] sm:max-h-[90vh] shadow-2xl p-3 sm:p-6 overflow-hidden flex flex-col">
+          <DialogHeader className="text-center pb-2 flex-shrink-0">
+            <DialogTitle className="text-base sm:text-2xl font-bold text-blood-red flex items-center justify-center gap-2">
               ⚔️ Resultado do Combate
             </DialogTitle>
             <DialogDescription className="text-stone-300 text-xs sm:text-sm mt-1">
@@ -254,18 +254,18 @@ export function HeroStatusCard({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-2 sm:space-y-3 py-2 max-h-[60vh] overflow-y-auto">
+          <div className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto">
             <button
               onClick={() => handleWoundTypeSelect('morto')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-900/30 to-red-800/30 hover:from-red-800/50 hover:to-red-700/50 border-2 border-red-600/40 hover:border-red-500/60 transition-all duration-200 p-3 sm:p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-900/30 to-red-800/30 hover:from-red-800/50 hover:to-red-700/50 border-2 border-red-600/40 hover:border-red-500/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
-                <div className="text-xl sm:text-2xl">💀</div>
+                <div className="text-lg sm:text-2xl">💀</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-red-400 text-sm sm:text-base group-hover:text-red-300">
                     Herói Morto
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
                     Abandone todos os tesouros. Pegue seu guerreiro e comece novamente.
                   </div>
                 </div>
@@ -274,15 +274,15 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('ferimento_grave')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-800/25 to-red-700/25 hover:from-red-700/40 hover:to-red-600/40 border-2 border-red-500/40 hover:border-red-400/60 transition-all duration-200 p-3 sm:p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-800/25 to-red-700/25 hover:from-red-700/40 hover:to-red-600/40 border-2 border-red-500/40 hover:border-red-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
-                <div className="text-xl sm:text-2xl">🩸</div>
+                <div className="text-lg sm:text-2xl">🩸</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-red-300 text-sm sm:text-base group-hover:text-red-200">
                     Ferimento Grave
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
                     Abandone metade de seu tesouro em quantidade de cartas e volte para a Escadaria Principal.
                   </div>
                 </div>
@@ -291,15 +291,15 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('ferimento_leve')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-orange-800/25 to-orange-700/25 hover:from-orange-700/40 hover:to-orange-600/40 border-2 border-orange-500/40 hover:border-orange-400/60 transition-all duration-200 p-3 sm:p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-orange-800/25 to-orange-700/25 hover:from-orange-700/40 hover:to-orange-600/40 border-2 border-orange-500/40 hover:border-orange-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
-                <div className="text-xl sm:text-2xl">🤕</div>
+                <div className="text-lg sm:text-2xl">🤕</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-orange-300 text-sm sm:text-base group-hover:text-orange-200">
                     Ferimento Leve
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
                     Abandone um de seus tesouros (livre escolha) e volte uma casa em relação ao monstro. Pule uma jogada.
                   </div>
                 </div>
@@ -308,15 +308,15 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('atordoado')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-800/25 to-yellow-700/25 hover:from-yellow-700/40 hover:to-yellow-600/40 border-2 border-yellow-500/40 hover:border-yellow-400/60 transition-all duration-200 p-3 sm:p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-800/25 to-yellow-700/25 hover:from-yellow-700/40 hover:to-yellow-600/40 border-2 border-yellow-500/40 hover:border-yellow-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
-                <div className="text-xl sm:text-2xl">😵</div>
+                <div className="text-lg sm:text-2xl">😵</div>
                 <div className="flex-1 min-w-0">
                   <div className="font-bold text-yellow-300 text-sm sm:text-base group-hover:text-yellow-200">
                     Atordoado
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-relaxed">
+                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
                     Abandone um dos tesouros.
                   </div>
                 </div>
@@ -327,9 +327,9 @@ export function HeroStatusCard({
       </Dialog>
 
       <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
-        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-[90vw] sm:max-w-md lg:max-w-lg shadow-2xl max-h-[90vh] overflow-hidden mx-4">
-          <DialogHeader className="text-center pb-2">
-            <DialogTitle className="text-lg sm:text-xl font-bold text-blood-red flex items-center justify-center gap-2">
+        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white w-[95vw] max-w-[400px] sm:max-w-md lg:max-w-lg h-[85vh] max-h-[700px] sm:max-h-[90vh] shadow-2xl p-3 sm:p-6 overflow-hidden flex flex-col">
+          <DialogHeader className="text-center pb-2 flex-shrink-0">
+            <DialogTitle className="text-base sm:text-xl font-bold text-blood-red flex items-center justify-center gap-2">
               {selectedWoundType === 'ferimento_leve' ? '🤕 Ferimento Leve' : '😵 Atordoado'}
             </DialogTitle>
             <DialogDescription className="text-stone-300 text-xs sm:text-sm">
@@ -337,9 +337,9 @@ export function HeroStatusCard({
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-3 sm:space-y-4 overflow-y-auto max-h-[60vh] px-1">
-            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-3 sm:p-4 rounded-lg border-2 border-yellow-600/30">
-              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto">
+            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-2 sm:p-4 rounded-lg border-2 border-yellow-600/30">
+              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3 flex flex-col gap-1">
                 <span>💰 Ouro a remover</span>
                 <span className="text-xs text-stone-400 font-normal">
                   (atual: {player.gold.toLocaleString("pt-BR")})
@@ -369,14 +369,14 @@ export function HeroStatusCard({
                       className="w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 hover:from-red-800/30 hover:to-red-700/30 border-2 border-stone-600/40 hover:border-red-500/50 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center"
                     >
                       <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
-                        <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
+                        <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
                           {item.icon}
                         </span>
                         <div className="flex-1 min-w-0">
                           <div className="font-semibold text-xs sm:text-sm text-white group-hover:text-red-200 truncate">
                             {item.name}
                           </div>
-                          <div className="text-xs text-stone-400 mt-1 leading-relaxed line-clamp-2">
+                          <div className="text-xs text-stone-400 mt-1 leading-tight line-clamp-2">
                             {item.description}
                           </div>
                         </div>
@@ -400,7 +400,7 @@ export function HeroStatusCard({
             )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-stone-600/30">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 border-t border-stone-600/30 flex-shrink-0">
             <button
               onClick={cancelItemSelection}
               className="flex-1 bg-gradient-to-r from-stone-600/50 to-stone-500/50 hover:from-stone-500/60 hover:to-stone-400/60 border-2 border-stone-500/50 hover:border-stone-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200 text-xs sm:text-sm min-h-[44px]"

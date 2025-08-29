@@ -24,93 +24,116 @@ export function WoundRulesModal({ isOpen, onClose }) {
       }}
     >
       <DialogContent 
-        className="bg-stone-charcoal border-stone-light/30 text-white max-w-[95vw] sm:max-w-2xl max-h-[95vh] overflow-hidden flex flex-col"
+        className="bg-stone-charcoal border-stone-light/30 text-white w-[95vw] max-w-[400px] sm:max-w-2xl h-[75vh] max-h-[600px] sm:max-h-[95vh] overflow-hidden flex flex-col p-2 sm:p-6"
         onKeyDown={handleKeyDown}
       >
-        <DialogHeader className="flex-shrink-0 pb-2">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl sm:text-2xl text-blood-red text-center flex-1">
-              ⚔️ Regras de Combate
-            </DialogTitle>
-            <button
-              onClick={handleClose}
-              className="ml-4 p-2 hover:bg-stone-light/20 rounded-full transition-colors"
-              aria-label="Fechar"
-            >
-              <span className="text-xl text-stone-light hover:text-white">✕</span>
-            </button>
-          </div>
+        <DialogHeader className="flex-shrink-0 pb-1">
+          <DialogTitle className="text-sm sm:text-2xl text-blood-red text-center font-bold">
+            ⚔️ Regras de Combate
+          </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto py-2 sm:py-4 scroll-container">
-          <div className="bg-dungeon-black/50 rounded-lg p-3 sm:p-4 mb-4">
-            <h3 className="text-base sm:text-lg font-bold text-ethereal-blue mb-3">📋 Jogo Básico</h3>
+        <div className="flex-1 overflow-y-auto scroll-container">
+          <div className="bg-dungeon-black/50 rounded-lg p-1.5 sm:p-4">
+            <h3 className="text-xs sm:text-lg font-bold text-ethereal-blue mb-1.5 sm:mb-3">📋 Jogo Básico</h3>
             
-            <div className="space-y-3 sm:space-y-4">
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm font-bold text-frost-blue border-b border-stone-light/20 pb-2">
+            <div className="space-y-1.5">
+              {/* Header da tabela - oculto no mobile */}
+              <div className="hidden sm:grid grid-cols-3 gap-4 text-sm font-bold text-frost-blue border-b border-stone-light/20 pb-2">
                 <div>Dados</div>
                 <div>Efeito</div>
                 <div>Penalidade</div>
               </div>
 
-              <div className="space-y-2">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm p-2 bg-blood-red/10 rounded">
-                  <div className="font-bold text-blood-red">2</div>
-                  <div className="font-bold text-blood-red">Herói morto</div>
-                  <div className="text-stone-light">
-                    Abandone todos os tesouros. Pegue seu guerreiro e comece novamente.
+              {/* Linhas da tabela */}
+              <div className="space-y-1.5 sm:space-y-3">
+                {/* Herói morto */}
+                <div className="bg-blood-red/10 rounded p-1.5 sm:p-3 border-l-4 border-blood-red">
+                  <div className="flex flex-col sm:grid sm:grid-cols-3 sm:gap-4 gap-0.5">
+                    <div className="flex items-center gap-2 sm:block">
+                      <span className="font-bold text-blood-red text-sm sm:text-lg">2</span>
+                      <span className="font-bold text-blood-red text-xs sm:hidden">- Herói morto</span>
+                    </div>
+                    <div className="font-bold text-blood-red hidden sm:block">Herói morto</div>
+                    <div className="text-stone-light text-xs sm:text-sm leading-tight">
+                      Abandone todos os tesouros. Pegue seu guerreiro e comece novamente.
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm p-2 bg-red-900/10 rounded">
-                  <div className="font-bold text-red-400">3</div>
-                  <div className="font-bold text-red-400">Ferimento grave</div>
-                  <div className="text-stone-light">
-                    Abandone metade de seu tesouro em quantidade de cartas (arredonde o número) e volte para a Escadaria Principal.
+                {/* Ferimento grave */}
+                <div className="bg-red-900/10 rounded p-1.5 sm:p-3 border-l-4 border-red-400">
+                  <div className="flex flex-col sm:grid sm:grid-cols-3 sm:gap-4 gap-0.5">
+                    <div className="flex items-center gap-2 sm:block">
+                      <span className="font-bold text-red-400 text-sm sm:text-lg">3</span>
+                      <span className="font-bold text-red-400 text-xs sm:hidden">- Ferimento grave</span>
+                    </div>
+                    <div className="font-bold text-red-400 hidden sm:block">Ferimento grave</div>
+                    <div className="text-stone-light text-xs sm:text-sm leading-tight">
+                      Abandone metade de seu tesouro em quantidade de cartas (arredonde o número) e volte para a Escadaria Principal.
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm p-2 bg-orange-900/10 rounded">
-                  <div className="font-bold text-orange-400">4 a 6</div>
-                  <div className="font-bold text-orange-400">Ferimento leve</div>
-                  <div className="text-stone-light">
-                    Abandone um de seus tesouros (livre escolha) e volte uma casa em relação ao monstro. Pule uma jogada.
+                {/* Ferimento leve */}
+                <div className="bg-orange-900/10 rounded p-1.5 sm:p-3 border-l-4 border-orange-400">
+                  <div className="flex flex-col sm:grid sm:grid-cols-3 sm:gap-4 gap-0.5">
+                    <div className="flex items-center gap-2 sm:block">
+                      <span className="font-bold text-orange-400 text-sm sm:text-lg">4 a 6</span>
+                      <span className="font-bold text-orange-400 text-xs sm:hidden">- Ferimento leve</span>
+                    </div>
+                    <div className="font-bold text-orange-400 hidden sm:block">Ferimento leve</div>
+                    <div className="text-stone-light text-xs sm:text-sm leading-tight">
+                      Abandone um de seus tesouros (livre escolha) e volte uma casa em relação ao monstro. Pule uma jogada.
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm p-2 bg-yellow-900/10 rounded">
-                  <div className="font-bold text-yellow-400">7 a 8</div>
-                  <div className="font-bold text-yellow-400">Atordoado</div>
-                  <div className="text-stone-light">
-                    Abandone um dos tesouros.
+                {/* Atordoado */}
+                <div className="bg-yellow-900/10 rounded p-1.5 sm:p-3 border-l-4 border-yellow-400">
+                  <div className="flex flex-col sm:grid sm:grid-cols-3 sm:gap-4 gap-0.5">
+                    <div className="flex items-center gap-2 sm:block">
+                      <span className="font-bold text-yellow-400 text-sm sm:text-lg">7 a 8</span>
+                      <span className="font-bold text-yellow-400 text-xs sm:hidden">- Atordoado</span>
+                    </div>
+                    <div className="font-bold text-yellow-400 hidden sm:block">Atordoado</div>
+                    <div className="text-stone-light text-xs sm:text-sm leading-tight">
+                      Abandone um dos tesouros.
+                    </div>
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm p-2 bg-green-900/10 rounded">
-                  <div className="font-bold text-green-400">9 ou +</div>
-                  <div className="font-bold text-green-400">Ileso</div>
-                  <div className="text-stone-light">
-                    Não lhe acontece nada.
+                {/* Ileso */}
+                <div className="bg-green-900/10 rounded p-1.5 sm:p-3 border-l-4 border-green-400">
+                  <div className="flex flex-col sm:grid sm:grid-cols-3 sm:gap-4 gap-0.5">
+                    <div className="flex items-center gap-2 sm:block">
+                      <span className="font-bold text-green-400 text-sm sm:text-lg">9 ou +</span>
+                      <span className="font-bold text-green-400 text-xs sm:hidden">- Ileso</span>
+                    </div>
+                    <div className="font-bold text-green-400 hidden sm:block">Ileso</div>
+                    <div className="text-stone-light text-xs sm:text-sm leading-tight">
+                      Não lhe acontece nada.
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           
-          <div className="text-center">
-            <p className="text-stone-light text-xs sm:text-sm mb-4">
-              Use esta tabela como referência durante os combates para aplicar os efeitos corretos.
+          <div className="text-center mt-2">
+            <p className="text-stone-light text-xs leading-tight">
+              Use esta tabela como referência durante os combates.
             </p>
           </div>
         </div>
         
-        <div className="flex-shrink-0 flex flex-col sm:flex-row gap-3 pt-4 border-t border-stone-light/20">
+        <div className="flex-shrink-0 pt-2 border-t border-stone-light/20">
           <Button 
             onClick={handleClose}
-            className="w-full bg-crystal-blue hover:bg-frost-blue text-white font-bold text-sm sm:text-base min-h-[48px]"
+            className="w-full bg-crystal-blue hover:bg-frost-blue text-white font-bold text-sm sm:text-base min-h-[40px] sm:min-h-[48px]"
             autoFocus
           >
-            Entendi - Fechar
+            Fechar
           </Button>
         </div>
       </DialogContent>
