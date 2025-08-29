@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlayerCard } from "@/components/game/PlayerCard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Shield, Users, ClipboardCopy, QrCode, Link as LinkIcon, ArrowLeft } from 'lucide-react';
+import { Shield, Users, ClipboardCopy, QrCode, Link as LinkIcon, ArrowLeft, Play } from 'lucide-react';
 
 export function RoomLobby() {
   const { gameState, startGameSelection, backToMenu, removePlayer, currentUser } = useMultiplayerGame();
@@ -102,6 +102,26 @@ export function RoomLobby() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ===== INÍCIO DA CORREÇÃO ===== */}
+          {/* Este bloco de código adiciona o botão de iniciar para telas maiores (desktop) */}
+          <div className="hidden sm:flex justify-end mt-4">
+            <Button
+              onClick={startGameSelection}
+              disabled={!meIsHost || playerList.length < 2}
+              size="lg"
+              className="bg-crystal-blue hover:bg-frost-blue text-white font-bold text-lg min-h-[52px] px-8 disabled:opacity-50"
+            >
+              <Play className="mr-2 h-5 w-5" />
+              {!meIsHost
+                ? 'Aguardando o Host iniciar'
+                : playerList.length < 2
+                ? 'Aguardando mais jogadores...'
+                : 'Iniciar Seleção'}
+            </Button>
+          </div>
+          {/* ===== FIM DA CORREÇÃO ===== */}
+
         </div>
       </div>
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
@@ -117,8 +137,13 @@ export function RoomLobby() {
       </Dialog>
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
         <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          <Button onClick={startGameSelection} disabled={playerList.length < 2} className="w-full bg-crystal-blue hover:bg-frost-blue text-white font-bold text-sm min-h-[48px] disabled:opacity-50">
-            {playerList.length < 2 ? 'Aguardando jogadores...' : '🎭 Iniciar Seleção'}
+          <Button onClick={startGameSelection} disabled={!meIsHost || playerList.length < 2} className="w-full bg-crystal-blue hover:bg-frost-blue text-white font-bold text-sm min-h-[48px] disabled:opacity-50">
+            {!meIsHost 
+                ? 'Aguardando o Host'
+                : playerList.length < 2 
+                    ? 'Aguardando jogadores...' 
+                    : '🎭 Iniciar Seleção'
+            }
           </Button>
           <Button onClick={backToMenu} variant="outline" className="w-full bg-transparent border-stone-light/30 text-stone-light hover:text-white hover:bg-stone-light/10 font-bold text-sm min-h-[44px]">
             <ArrowLeft className="w-4 h-4 mr-2"/>

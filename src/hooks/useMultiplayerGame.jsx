@@ -591,6 +591,35 @@ export function MultiplayerProvider({ children }) {
     const path = `endGameProposal.votes.${authUser.uid}`
     await updateDoc(doc(db, "rooms", roomId), { [path]: vote, lastUpdated: serverTimestamp() })
   }
+  
+  const processEndGameVotes = async () => {
+    const { room, players } = gameState;
+    const proposal = room?.endGameProposal;
+    const me = authUser ? players[authUser.uid] : null;
+
+    if (!proposal || room.gamePhase === 'ending' || !me?.isHost || proposal.status !== 'pending') {
+        return;
+    }
+
+    const playerIds = Object.keys(players);
+    const voterIds = playerIds.filter(id => id !== proposal.proposerId);
+    const votes = Object.keys(proposal.votes);
+    const hasEveryoneVoted = voterIds.every(id => votes.includes(id));
+
+    if (hasEveryoneVoted) {
+        const hasRejection = Object.values(proposal.votes).includes('reject');
+        const roomRef = doc(db, "rooms", room.id);
+
+        if (hasRejection) {
+            console.log("Proposta rejeitada! Resetando votação.");
+            await updateDoc(roomRef, { endGameProposal: null });
+        } else {
+            console.log("Proposta aceita! Finalizando o jogo.");
+            await updateDoc(roomRef, { gamePhase: 'ending' });
+            await endGameAndSaveHistory();
+        }
+    }
+  };
 
   const endGameAndSaveHistory = async () => {
     const { players, room } = gameState
@@ -739,6 +768,7 @@ export function MultiplayerProvider({ children }) {
       proposeEndGame,
       voteOnEndGame,
       endGameAndSaveHistory,
+      processEndGameVotes,
 
       testFirebaseConnection,
       forceSyncRoom,

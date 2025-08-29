@@ -6,36 +6,15 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export function EndGameModal() {
-  const { gameState, currentUser, voteOnEndGame, endGameAndSaveHistory } = useMultiplayerGame();
+  const { gameState, currentUser, voteOnEndGame, processEndGameVotes } = useMultiplayerGame();
   const { room, players } = gameState;
   const proposal = room?.endGameProposal;
 
   useEffect(() => {
-    if (!proposal || !currentUser) {
-      return;
+    if (proposal && currentUser?.isHost) {
+      processEndGameVotes();
     }
-
-    if (proposal.status === 'pending' && currentUser.isHost) {
-      const playerIds = Object.keys(players);
-      const voterIds = playerIds.filter(id => id !== proposal.proposerId);
-      const votes = Object.keys(proposal.votes);
-
-      const hasEveryoneVoted = voterIds.every(id => votes.includes(id));
-      
-      if (hasEveryoneVoted) {
-        const hasRejection = Object.values(proposal.votes).includes('reject');
-        
-        if (hasRejection) {
-          console.log("Proposta rejeitada! Resetando votação.");
-          const roomRef = doc(db, "rooms", room.id);
-          updateDoc(roomRef, { endGameProposal: null });
-        } else {
-          console.log("Proposta aceita por todos! Finalizando o jogo.");
-          endGameAndSaveHistory();
-        }
-      }
-    }
-  }, [proposal, players, currentUser, endGameAndSaveHistory, room?.id]);
+  }, [proposal, players, currentUser, processEndGameVotes]);
 
   if (!proposal || !currentUser || proposal.proposerId === currentUser.id) {
     return null;
