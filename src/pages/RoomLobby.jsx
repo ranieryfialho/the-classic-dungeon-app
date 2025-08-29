@@ -1,4 +1,3 @@
-// src/pages/RoomLobby.jsx - Correção Completa dos Botões Duplicados
 import { useState } from 'react';
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Button } from "@/components/ui/button";
@@ -6,25 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { PlayerCard } from "@/components/game/PlayerCard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Shield, Users, ClipboardCopy, QrCode, Link as LinkIcon, ArrowLeft } from 'lucide-react';
 
 export function RoomLobby() {
-  const { gameState, startGameSelection, backToMenu } = useMultiplayerGame();
+  const { gameState, startGameSelection, backToMenu, removePlayer, currentUser } = useMultiplayerGame();
   const { room, players } = gameState;
   const playerList = Object.values(players);
+  const meIsHost = currentUser ? players[currentUser.id]?.isHost : false;
 
   const [showQrModal, setShowQrModal] = useState(false);
+  const [copied, setCopied] = useState('');
+
+  const showToast = (message) => {
+    setCopied(message);
+    setTimeout(() => setCopied(''), 2000);
+  };
+
+  const copyToClipboard = (text, message) => {
+    navigator.clipboard.writeText(text);
+    showToast(message);
+  };
+  
+  const copyRoomCode = () => {
+    copyToClipboard(room.id, 'Código copiado!');
+  };
 
   const copyInviteLink = () => {
-    navigator.clipboard.writeText(room.inviteLink);
-    const toast = document.createElement('div');
-    toast.textContent = 'Link copiado!';
-    toast.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg z-50 text-sm';
-    document.body.appendChild(toast);
-    setTimeout(() => {
-      if (document.body.contains(toast)) {
-        document.body.removeChild(toast);
-      }
-    }, 2000);
+    copyToClipboard(room.inviteLink, 'Link copiado!');
   };
 
   const getQRCodeUrl = (text) => {
@@ -34,49 +41,72 @@ export function RoomLobby() {
 
   return (
     <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black safe-area-top safe-area-left safe-area-right">
+      {copied && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg z-50 animate-in fade-in-0 slide-in-from-top-4 duration-300">
+          {copied}
+        </div>
+      )}
       <div className="container-mobile-safe py-4 sm:py-8 flex items-center justify-center min-h-screen">
-        <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+        <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6 pb-24 sm:pb-0">
 
           <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6">
-              <CardTitle className="text-xl sm:text-2xl font-bold text-ethereal-blue text-center sm:text-left">
-                🏰 Sala de {room.hostName}
+              <CardTitle className="text-xl sm:text-2xl font-bold text-ethereal-blue text-center sm:text-left flex items-center gap-3">
+                <Shield />
+                Sala de {room.hostName}
               </CardTitle>
               <Button 
                 onClick={backToMenu} 
                 variant="outline" 
-                className="hidden sm:inline-flex text-white hover:text-white bg-crystal-blue hover:bg-frost-blue w-full sm:w-auto min-h-[44px] text-sm sm:text-base"
+                className="hidden sm:inline-flex bg-weathered-gray hover:bg-stone-light text-white font-bold border-stone-light/50 min-h-[44px] text-sm sm:text-base"
               >
+                <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar ao Menu
               </Button>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6 pt-0">
-              <label className="text-xs sm:text-sm font-medium text-frost-blue block mb-2">
-                Link de Convite
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <Input 
-                  readOnly 
-                  value={room.inviteLink} 
-                  className="bg-dungeon-black border-stone-light/30 text-xs sm:text-sm flex-1" 
-                />
-                <div className="flex gap-2">
-                  <Button 
-                    onClick={copyInviteLink}
-                    variant="outline" 
-                    className="bg-crystal-blue hover:bg-frost-blue text-white hover:text-white font-bold border-stone-light/50 flex-1 sm:flex-none min-h-[44px] text-xs sm:text-sm"
-                  >
-                    <span className="sm:hidden">📋</span>
-                    <span className="hidden sm:inline">Copiar</span>
+            <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
+              <div>
+                <label className="text-xs sm:text-sm font-medium text-frost-blue block mb-2">
+                  Código da Sala
+                </label>
+                <div className="flex items-center gap-2 p-2 pr-3 bg-dungeon-black rounded-lg border border-stone-light/30">
+                  <p className="text-2xl sm:text-4xl font-mono font-bold text-ethereal-blue tracking-widest flex-1 text-center">
+                    {room.id}
+                  </p>
+                  <Button onClick={copyRoomCode} variant="ghost" size="icon" className="text-stone-light hover:text-white shrink-0">
+                    <ClipboardCopy className="h-6 w-6" />
                   </Button>
-                  <Button 
-                    onClick={() => setShowQrModal(true)} 
-                    variant="outline" 
-                    className="bg-void-purple/80 hover:bg-void-purple text-white hover:text-white font-bold border-stone-light/50 flex-1 sm:flex-none min-h-[44px] text-xs sm:text-sm"
-                  >
-                    <span className="sm:hidden">📱</span>
-                    <span className="hidden sm:inline">QR Code</span>
-                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs sm:text-sm font-medium text-frost-blue block mb-2">
+                  Link de Convite
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input 
+                    readOnly 
+                    value={room.inviteLink} 
+                    className="bg-dungeon-black border-stone-light/30 text-xs sm:text-sm flex-1" 
+                  />
+                  <div className="flex gap-2">
+                    <Button 
+                      onClick={copyInviteLink}
+                      variant="outline" 
+                      className="bg-crystal-blue hover:bg-frost-blue text-white hover:text-white font-bold border-stone-light/50 flex-1 sm:flex-none min-h-[44px] text-xs sm:text-sm"
+                    >
+                      <LinkIcon className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Copiar Link</span>
+                    </Button>
+                    <Button 
+                      onClick={() => setShowQrModal(true)} 
+                      variant="outline" 
+                      className="bg-void-purple/80 hover:bg-void-purple text-white hover:text-white font-bold border-stone-light/50 flex-1 sm:flex-none min-h-[44px] text-xs sm:text-sm"
+                    >
+                      <QrCode className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">QR Code</span>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -84,19 +114,26 @@ export function RoomLobby() {
 
           <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">
-                👥 Jogadores na Sala ({playerList.length}/6)
+              <CardTitle className="text-lg sm:text-xl font-bold text-white text-center sm:text-left flex items-center gap-3">
+                <Users />
+                Jogadores na Sala ({playerList.length}/6)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 sm:p-6 pt-0">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {playerList.map(player => (
-                  <PlayerCard key={player.id} player={player} />
+                  <PlayerCard 
+                    key={player.id} 
+                    player={player}
+                    isHost={meIsHost}
+                    isCurrentUser={player.id === currentUser?.id}
+                    onRemove={removePlayer}
+                  />
                 ))}
               </div>
             </CardContent>
           </Card>
-
+          
           <div className="hidden sm:block text-center space-y-3 sm:space-y-4">
             <Button 
               onClick={startGameSelection}
@@ -135,17 +172,6 @@ export function RoomLobby() {
               </div>
             )}
           </div>
-          <div className="px-2 sm:px-4">
-            <p className="text-center text-xs sm:text-sm text-stone-light break-all bg-dungeon-black/50 p-2 rounded">
-              {room.inviteLink}
-            </p>
-            <Button 
-              onClick={copyInviteLink}
-              className="w-full mt-3 bg-crystal-blue hover:bg-frost-blue min-h-[44px]"
-            >
-              📋 Copiar Link
-            </Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -164,6 +190,7 @@ export function RoomLobby() {
             variant="outline"
             className="w-full bg-transparent border-stone-light/30 text-stone-light hover:text-white hover:bg-stone-light/10 font-bold text-sm min-h-[44px]"
           >
+            <ArrowLeft className="w-4 h-4 mr-2"/>
             Voltar ao Menu
           </Button>
         </div>

@@ -286,6 +286,27 @@ export function MultiplayerProvider({ children }) {
     const data = snap.data()
     return Array.isArray(data.players) ? data.players : []
   }
+  
+  const removePlayer = async (playerIdToRemove) => {
+    const { room, players } = gameState;
+    const me = authUser ? players[authUser.uid] : null;
+
+    // Apenas o host pode remover, e não pode remover a si mesmo
+    if (!me || !room?.id || !me.isHost || me.id === playerIdToRemove) {
+      console.error("Permissão negada ou operação inválida.");
+      return;
+    }
+
+    try {
+      const roomRef = doc(db, "rooms", room.id);
+      const currentPlayers = await readPlayersArray(roomRef);
+      const updatedPlayers = currentPlayers.filter(p => p.id !== playerIdToRemove);
+      
+      await updateDoc(roomRef, { players: updatedPlayers, lastUpdated: serverTimestamp() });
+    } catch (e) {
+      console.error("[useMultiplayerGame] removePlayer error:", e);
+    }
+  };
 
   // ————————————————————————————————————————
   // Criação / Entrada em Sala
@@ -704,6 +725,7 @@ export function MultiplayerProvider({ children }) {
 
       createRoom,
       joinRoom,
+      removePlayer,
 
       startGameSelection,
       startGame,
