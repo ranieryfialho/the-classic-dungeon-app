@@ -1,8 +1,6 @@
-// src/hooks/useLocalStorage.js - Hook puro para localStorage
 import { useState, useEffect } from "react";
 
 export const useLocalStorage = (key, initialValue) => {
-  // Função para ler do localStorage de forma segura
   const readFromStorage = () => {
     try {
       if (typeof window !== 'undefined') {
@@ -18,15 +16,12 @@ export const useLocalStorage = (key, initialValue) => {
 
   const [storedValue, setStoredValue] = useState(readFromStorage);
 
-  // Função para salvar no localStorage
   const setValue = (value) => {
     try {
-      // Permitir que value seja uma função como useState padrão
       const valueToStore = value instanceof Function ? value(storedValue) : value;
       
       setStoredValue(valueToStore);
-      
-      // Salvar no localStorage
+
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(key, JSON.stringify(valueToStore));
       }
@@ -35,7 +30,6 @@ export const useLocalStorage = (key, initialValue) => {
     }
   };
 
-  // Recarregar do localStorage quando a janela ganha foco (para sincronizar entre abas)
   useEffect(() => {
     const handleStorageChange = () => {
       const newValue = readFromStorage();
@@ -48,9 +42,7 @@ export const useLocalStorage = (key, initialValue) => {
       handleStorageChange();
     };
 
-    // Escutar mudanças no localStorage de outras abas
     window.addEventListener('storage', handleStorageChange);
-    // Escutar quando a janela ganha foco
     window.addEventListener('focus', handleFocus);
 
     return () => {

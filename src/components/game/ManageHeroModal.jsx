@@ -23,20 +23,17 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
   const { updatePlayerStats, addItemToInventory, removeItemFromInventory } =
     useMultiplayerGame();
   const [gold, setGold] = useState(0);
-  // Removido: const [isWounded, setIsWounded] = useState(false);
   const [selectedItem, setSelectedItem] = useState("");
 
   useEffect(() => {
     if (player) {
       setGold(player.gold);
-      // Removido: setIsWounded(player.isWounded);
     }
   }, [player]);
 
   const handleSave = () => {
     updatePlayerStats(player.id, {
       gold: parseInt(gold, 10),
-      // Removido: isWounded: isWounded,
     });
     onClose();
   };
@@ -59,7 +56,6 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-          {/* Seção de Status */}
           <div className="space-y-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label
@@ -76,9 +72,7 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
                 className="col-span-3 bg-dungeon-black border-stone-light/30"
               />
             </div>
-            {/* Removido: Switch de Status */}
           </div>
-          {/* Seção de Inventário */}
           <div className="space-y-4">
             <h4 className="font-bold text-lg text-frost-blue border-b border-stone-light/20 pb-2">
               Inventário

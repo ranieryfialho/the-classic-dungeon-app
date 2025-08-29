@@ -16,7 +16,6 @@ export function RoomLobby() {
 
   const copyInviteLink = () => {
     navigator.clipboard.writeText(room.inviteLink);
-    // Toast mais amigável para mobile
     const toast = document.createElement('div');
     toast.textContent = 'Link copiado!';
     toast.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 bg-green-600 text-white px-4 py-2 rounded-lg z-50 text-sm';
@@ -28,7 +27,6 @@ export function RoomLobby() {
     }, 2000);
   };
 
-  // Função para gerar QR Code usando API externa (Google Charts)
   const getQRCodeUrl = (text) => {
     const encodedText = encodeURIComponent(text);
     return `https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodedText}`;
@@ -37,15 +35,13 @@ export function RoomLobby() {
   return (
     <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black safe-area-top safe-area-left safe-area-right">
       <div className="container-mobile-safe py-4 sm:py-8 flex items-center justify-center min-h-screen">
-        <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6 pb-20 sm:pb-0"> {/* Padding bottom apenas no mobile */}
-          
-          {/* Room Info Card */}
+        <div className="max-w-4xl mx-auto w-full space-y-4 sm:space-y-6 pb-20 sm:pb-0">
+
           <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 sm:p-6">
               <CardTitle className="text-xl sm:text-2xl font-bold text-ethereal-blue text-center sm:text-left">
                 🏰 Sala de {room.hostName}
               </CardTitle>
-              {/* Botão Voltar APENAS no desktop */}
               <Button 
                 onClick={backToMenu} 
                 variant="outline" 
@@ -86,7 +82,6 @@ export function RoomLobby() {
             </CardContent>
           </Card>
 
-          {/* Players Card */}
           <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="p-4 sm:p-6">
               <CardTitle className="text-lg sm:text-xl font-bold text-white text-center sm:text-left">
@@ -102,7 +97,6 @@ export function RoomLobby() {
             </CardContent>
           </Card>
 
-          {/* Start Game Section - APENAS no desktop */}
           <div className="hidden sm:block text-center space-y-3 sm:space-y-4">
             <Button 
               onClick={startGameSelection}
@@ -119,7 +113,6 @@ export function RoomLobby() {
         </div>
       </div>
 
-      {/* QR Code Modal - Usando API externa */}
       <Dialog open={showQrModal} onOpenChange={setShowQrModal}>
         <DialogContent className="max-w-[90vw] sm:max-w-[425px] bg-stone-charcoal text-white border-stone-light/20 mx-4">
           <DialogHeader>
@@ -156,10 +149,8 @@ export function RoomLobby() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Fixed Bottom Actions - APENAS no mobile */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
         <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          {/* Botão principal de ação */}
           <Button 
             onClick={startGameSelection}
             disabled={playerList.length < 2}
@@ -167,8 +158,7 @@ export function RoomLobby() {
           >
             {playerList.length < 2 ? 'Aguardando jogadores...' : '🎭 Iniciar Seleção'}
           </Button>
-          
-          {/* Botão secundário */}
+
           <Button 
             onClick={backToMenu}
             variant="outline"

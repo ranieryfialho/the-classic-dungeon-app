@@ -1,4 +1,3 @@
-// src/pages/CharacterSelection.jsx - Correção Completa dos Botões Duplicados
 import { useState } from "react";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { characterClasses } from "@/config/characterClasses";
@@ -49,9 +48,8 @@ export function CharacterSelection() {
 
   return (
     <div className="min-h-screen w-full bg-dungeon-black safe-area-top safe-area-left safe-area-right container-mobile-safe">
-      <div className="max-w-7xl mx-auto py-4 sm:py-8 pb-24 sm:pb-8"> {/* Padding bottom maior para mobile */}
-        
-        {/* Header Desktop APENAS */}
+      <div className="max-w-7xl mx-auto py-4 sm:py-8 pb-24 sm:pb-8">
+
         <div className="hidden sm:flex sm:justify-between sm:items-center mb-6 sm:mb-8 gap-4">
           <div className="text-center sm:text-left flex-grow">
             <h1 className="text-2xl sm:text-4xl font-bold text-ethereal-blue mb-2">
@@ -70,7 +68,6 @@ export function CharacterSelection() {
           </Button>
         </div>
 
-        {/* Header Mobile APENAS */}
         <div className="sm:hidden text-center mb-6">
           <h1 className="text-2xl font-bold text-ethereal-blue mb-2">
             Forme sua Equipe
@@ -80,9 +77,7 @@ export function CharacterSelection() {
           </p>
         </div>
 
-        {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-          {/* Character Classes Grid */}
           <div className="lg:col-span-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
               {characterClasses.map((charClass) => {
@@ -125,11 +120,9 @@ export function CharacterSelection() {
             </div>
           </div>
 
-          {/* Team Status and Actions - APENAS Desktop */}
           <div className="hidden lg:block space-y-4 sm:space-y-6">
             <TeamStatus />
-            
-            {/* Start Game Button - Desktop */}
+
             {isHost && (
               <div className="text-center space-y-3">
                 <Button
@@ -147,8 +140,7 @@ export function CharacterSelection() {
                 )}
               </div>
             )}
-            
-            {/* Non-host waiting message - Desktop */}
+
             {!isHost && (
               <div className="text-center">
                 <p className="text-sm text-stone-light">
@@ -160,7 +152,6 @@ export function CharacterSelection() {
         </div>
       </div>
 
-      {/* Hero Selection Modal */}
       <Dialog
         open={!!selectedClass}
         onOpenChange={() => setSelectedClass(null)}
@@ -190,10 +181,8 @@ export function CharacterSelection() {
         </DialogContent>
       </Dialog>
 
-      {/* Mobile Fixed Bottom Actions - APENAS Mobile */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
         <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          {/* Botão de iniciar jogo (apenas para host) */}
           {isHost && (
             <Button
               onClick={startGame}
@@ -203,15 +192,13 @@ export function CharacterSelection() {
               {allPlayersReady ? 'Iniciar Jogo' : 'Aguardando jogadores...'}
             </Button>
           )}
-          
-          {/* Mensagem para não-hosts */}
+
           {!isHost && (
             <div className="text-center text-sm text-stone-light py-2">
               Aguardando o host iniciar o jogo...
             </div>
           )}
-          
-          {/* Botão sair */}
+
           <Button 
             onClick={handleLeaveRoom} 
             variant="outline"

@@ -15,8 +15,7 @@ export function PlayerProfile() {
   const [displayName, setDisplayName] = useState('');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-  
-  // Estados para todas as estatísticas
+
   const [totalMatches, setTotalMatches] = useState(0);
   const [totalWins, setTotalWins] = useState(0);
   const [mostPlayedClass, setMostPlayedClass] = useState(null);
@@ -51,14 +50,11 @@ export function PlayerProfile() {
         
         setMatches(userMatches);
 
-        // --- LÓGICA DE CÁLCULO DAS ESTATÍSTICAS ---
         if (userMatches.length > 0) {
-          // Estatísticas básicas
           setTotalMatches(userMatches.length);
           const wins = userMatches.filter(match => match.winnerId === currentUser.uid).length;
           setTotalWins(wins);
 
-          // Calcular Classe Mais Jogada
           const classCounts = {};
           userMatches.forEach(match => {
             const myPlayer = match.players.find(p => p.userId === currentUser.uid);
@@ -70,7 +66,6 @@ export function PlayerProfile() {
           const mostPlayed = Object.keys(classCounts).reduce((a, b) => classCounts[a] > classCounts[b] ? a : b);
           setMostPlayedClass(mostPlayed);
 
-          // Calcular Companheiro Mais Frequente
           const companionCounts = {};
           userMatches.forEach(match => {
             match.playerIds.forEach(id => {

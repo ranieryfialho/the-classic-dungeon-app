@@ -11,14 +11,10 @@ export function EndGameModal() {
   const proposal = room?.endGameProposal;
 
   useEffect(() => {
-    // ++ VERIFICAÇÃO DE SEGURANÇA ADICIONADA AQUI ++
-    // Garante que a lógica só rode se tivermos uma proposta e um usuário definidos.
     if (!proposal || !currentUser) {
       return;
     }
 
-    // A lógica de finalização/rejeição deve ser executada apenas por um cliente (o host é um bom candidato)
-    // para evitar que todos os jogadores tentem fazer a mesma coisa ao mesmo tempo.
     if (proposal.status === 'pending' && currentUser.isHost) {
       const playerIds = Object.keys(players);
       const voterIds = playerIds.filter(id => id !== proposal.proposerId);
@@ -32,7 +28,6 @@ export function EndGameModal() {
         if (hasRejection) {
           console.log("Proposta rejeitada! Resetando votação.");
           const roomRef = doc(db, "rooms", room.id);
-          // Limpa a proposta no Firestore para que o modal desapareça para todos
           updateDoc(roomRef, { endGameProposal: null });
         } else {
           console.log("Proposta aceita por todos! Finalizando o jogo.");
@@ -42,7 +37,6 @@ export function EndGameModal() {
     }
   }, [proposal, players, currentUser, endGameAndSaveHistory, room?.id]);
 
-  // Não mostra o modal para o jogador que fez a proposta
   if (!proposal || !currentUser || proposal.proposerId === currentUser.id) {
     return null;
   }
