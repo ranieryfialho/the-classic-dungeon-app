@@ -6,12 +6,6 @@
   justify-content: center;
   align-items: center;
   padding: 1rem;
-  background: radial-gradient(
-    ellipse at center,
-    #2d3748 0%,
-    /* --ancient-stone */ #1a1d23 50%,
-    /* --stone-charcoal */ #0b0b0f 100% /* --dungeon-black */
-  );
   color: #e2e8f0;
   font-family: "Poppins", sans-serif;
   box-sizing: border-box;

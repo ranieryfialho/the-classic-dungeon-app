@@ -10,30 +10,16 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 
 const QrScannerComponent = ({ onScanSuccess }) => {
   useEffect(() => {
-    const scanner = new Html5QrcodeScanner(
-      'qr-reader-container',
-      {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      },
-      false
-    );
-
-    scanner.render(onScanSuccess, (error) => {
-    });
-
+    const scanner = new Html5QrcodeScanner('qr-reader-container', { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+    scanner.render(onScanSuccess, (error) => {});
     return () => {
       if (scanner && scanner.getState() === 2) {
-        scanner.clear().catch(err => {
-          console.error("Falha ao limpar o scanner.", err);
-        });
+        scanner.clear().catch(err => console.error("Falha ao limpar o scanner.", err));
       }
     };
   }, [onScanSuccess]);
-
   return <div id="qr-reader-container" />;
 };
-
 
 export function JoinRoom() {
   const { joinRoom, backToMenu } = useMultiplayerGame();
@@ -56,10 +42,8 @@ export function JoinRoom() {
       setError("Por favor, insira o código da sala.");
       return;
     }
-    
     setError('');
     setIsLoading(true);
-    
     try {
       const success = await joinRoom(finalRoomId.trim().toUpperCase());
       if (!success) {
@@ -77,7 +61,6 @@ export function JoinRoom() {
     try {
       const url = new URL(decodedText);
       const roomFromQr = url.searchParams.get('room');
-
       if (roomFromQr) {
         const finalRoomId = roomFromQr.toUpperCase();
         setRoomId(finalRoomId);
@@ -104,7 +87,7 @@ export function JoinRoom() {
 
   return (
     <>
-      <div className="min-h-screen full-height w-full flex items-center justify-center bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black safe-top safe-bottom safe-left safe-right">
+      <div className="min-h-screen w-full flex items-center justify-center bg-transparent safe-top safe-bottom safe-left safe-right">
         <div className="container-mobile-safe py-4 sm:py-8">
           <Card className="w-full max-w-sm sm:max-w-md mx-auto bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader className="p-4 sm:p-6">
@@ -116,65 +99,23 @@ export function JoinRoom() {
                 Digite o código da sala para se juntar aos seus amigos.
               </CardDescription>
             </CardHeader>
-            
             <CardContent className="p-4 sm:p-6 pt-0">
-               <div className="space-y-4 sm:space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <div className="space-y-2">
-                  <Label htmlFor="room-code" className="text-frost-blue text-sm sm:text-base font-medium">
-                    Código da Sala
-                  </Label>
-                  <Input
-                    id="room-code"
-                    value={roomId}
-                    onChange={handleInputChange}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ex: J8XF2K"
-                    className="bg-dungeon-black border-ancient-stone text-white placeholder:text-stone-light/50 text-lg sm:text-xl tracking-widest text-center font-mono min-h-[48px] sm:min-h-[52px] focus:border-crystal-blue focus:ring-2 focus:ring-crystal-blue/20 transition-all duration-200"
-                    maxLength={6}
-                    autoCapitalize="characters"
-                    autoComplete="off"
-                    autoCorrect="off"
-                    spellCheck="false"
-                  />
-                  <p className="text-xs text-stone-light/60 text-center">
-                    Códigos têm 6 caracteres (letras e números)
-                  </p>
+                  <Label htmlFor="room-code" className="text-frost-blue text-sm sm:text-base font-medium">Código da Sala</Label>
+                  <Input id="room-code" value={roomId} onChange={handleInputChange} onKeyPress={handleKeyPress} placeholder="Ex: J8XF2K" className="bg-dungeon-black border-ancient-stone text-white placeholder:text-stone-light/50 text-lg sm:text-xl tracking-widest text-center font-mono min-h-[48px] sm:min-h-[52px] focus:border-crystal-blue focus:ring-2 focus:ring-crystal-blue/20 transition-all duration-200" maxLength={6} autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck="false" />
+                  <p className="text-xs text-stone-light/60 text-center">Códigos têm 6 caracteres (letras e números)</p>
                 </div>
-
-                {error && (
-                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3">
-                    <p className="text-sm text-red-400 text-center">{error}</p>
-                  </div>
-                )}
-
+                {error && (<div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3"><p className="text-sm text-red-400 text-center">{error}</p></div>)}
                 <div className="flex flex-col space-y-3">
-                  <Button 
-                    onClick={() => handleJoin()} 
-                    disabled={isLoading || roomId.length < 4}
-                    size="lg" 
-                    className="bg-crystal-blue hover:bg-frost-blue text-white font-bold text-base sm:text-lg w-full min-h-[48px] sm:min-h-[52px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                  >
+                  <Button onClick={() => handleJoin()} disabled={isLoading || roomId.length < 4} size="lg" className="bg-crystal-blue hover:bg-frost-blue text-white font-bold text-base sm:text-lg w-full min-h-[48px] sm:min-h-[52px] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
                     {isLoading ? "Conectando..." : <><LogIn /><span>Entrar na Sala</span></>}
                   </Button>
-
-                  <Button 
-                    onClick={() => setIsScannerOpen(true)}
-                    variant="outline"
-                    size="lg" 
-                    className="bg-void-purple/80 hover:bg-void-purple text-white hover:text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200"
-                    disabled={isLoading}
-                  >
+                  <Button onClick={() => setIsScannerOpen(true)} variant="outline" size="lg" className="bg-void-purple/80 hover:bg-void-purple text-white hover:text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200" disabled={isLoading}>
                     <QrCode />
                     <span>Ler QR Code</span>
                   </Button>
-                  
-                  <Button 
-                    onClick={backToMenu} 
-                    variant="secondary" 
-                    size="lg" 
-                    className="bg-weathered-gray hover:bg-stone-light text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200"
-                    disabled={isLoading}
-                  >
+                  <Button onClick={backToMenu} variant="secondary" size="lg" className="bg-weathered-gray hover:bg-stone-light text-white font-bold text-base sm:text-lg border-stone-light/50 w-full min-h-[48px] sm:min-h-[52px] transition-all duration-200" disabled={isLoading}>
                     <ArrowLeft />
                     <span>Voltar ao Menu</span>
                   </Button>
@@ -184,14 +125,11 @@ export function JoinRoom() {
           </Card>
         </div>
       </div>
-
       <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
         <DialogContent className="bg-stone-charcoal text-white border-stone-light/20">
           <DialogHeader>
             <DialogTitle className="text-xl text-ethereal-blue">Ler QR Code</DialogTitle>
-            <DialogDescription className="text-stone-light">
-              Aponte a câmera para o QR Code de convite.
-            </DialogDescription>
+            <DialogDescription className="text-stone-light">Aponte a câmera para o QR Code de convite.</DialogDescription>
           </DialogHeader>
           <div className="w-full mt-4">
             {isScannerOpen && <QrScannerComponent onScanSuccess={handleScanSuccess} />}

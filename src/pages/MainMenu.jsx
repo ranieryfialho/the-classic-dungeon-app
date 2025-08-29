@@ -1,8 +1,7 @@
 // src/pages/MainMenu.jsx
 
 import { useState, useEffect } from 'react';
-// Importações de ícones da biblioteca lucide-react (AGORA CORRIGIDO E VERIFICADO)
-import { Swords, DoorOpen, ScrollText, LogOut, Shield } from 'lucide-react'; 
+import { Swords, DoorOpen, ScrollText, LogOut, Shield } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
@@ -11,7 +10,7 @@ import { db } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
 export function MainMenu() {
-  const { createRoom, goToProfile, goToJoinRoom } = useMultiplayerGame(); 
+  const { createRoom, goToProfile, goToJoinRoom } = useMultiplayerGame();
   const { currentUser, logout } = useAuth();
   const [playerName, setPlayerName] = useState('');
 
@@ -42,7 +41,8 @@ export function MainMenu() {
   };
 
   return (
-    <div className="min-h-screen full-height w-full flex items-center justify-center bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black safe-top safe-bottom safe-left safe-right">
+    // Este div agora tem fundo transparente, pois o App.jsx controla o background
+    <div className="min-h-screen full-height w-full flex items-center justify-center bg-transparent">
       <div className="container-mobile-safe py-4 sm:py-8">
         <div className="text-center max-w-md mx-auto">
           {playerName && (
@@ -111,9 +111,6 @@ export function MainMenu() {
               </div>
             </CardContent>
           </Card>
-          
-          <div className="mt-6 sm:mt-8 text-xs sm:text-sm text-stone-light/60 mobile-hidden">
-          </div>
         </div>
       </div>
     </div>
