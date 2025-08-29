@@ -30,15 +30,12 @@ export function GameDashboard() {
   const handleProposeEndGame = () => {
     if (!currentUser || !currentUser.character) return;
 
-    // Encontra os dados da classe do jogador atual
     const classData = characterClasses.find(c => c.name === currentUser.character.className);
     if (!classData) return;
 
-    // Verifica se o ouro do jogador é maior ou igual à meta
     if (currentUser.gold >= classData.goldTarget) {
       proposeEndGame();
     } else {
-      // Se não for, exibe um alerta
       alert(`Você ainda não atingiu sua meta de ouro! Você precisa de ${classData.goldTarget.toLocaleString('pt-BR')} de ouro para propor o fim do jogo.`);
     }
   };
@@ -47,37 +44,73 @@ export function GameDashboard() {
 
   return (
     <>
-      <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black p-4 md:p-8">
-        <header className="flex justify-between items-center mb-8 max-w-7xl mx-auto">
-          <h1 className="text-4xl font-bold text-ethereal-blue">A Aventura Começou!</h1>
-          <div className="flex gap-3">
+      <div className="min-h-screen w-full bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black safe-area-top safe-area-left safe-area-right">
+        <header className="hidden sm:block container-mobile-safe py-4 sm:py-8 mb-4 sm:mb-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex justify-between items-center">
+              <h1 className="text-2xl sm:text-4xl font-bold text-ethereal-blue">
+                A Aventura Começou!
+              </h1>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setShowWoundRules(true)}
+                  className="bg-blood-red hover:bg-red-700 text-white font-bold text-lg px-6 py-3"
+                >
+                  ⚔️ Regras de Combate
+                </Button>
+                <Button 
+                  onClick={handleProposeEndGame} 
+                  disabled={hasPendingProposal}
+                  className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg px-6 py-3 disabled:opacity-50"
+                >
+                  {hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <header className="sm:hidden container-mobile-safe py-4 mb-4">
+          <div className="max-w-7xl mx-auto text-center">
+            <h1 className="text-2xl font-bold text-ethereal-blue">
+              A Aventura Começou!
+            </h1>
+          </div>
+        </header>
+
+        <main className="container-mobile-safe pb-20 sm:pb-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+              {playerList.map(player => (
+                <HeroStatusCard 
+                  key={player.id} 
+                  player={player}
+                  isCurrentUser={player.id === currentUser.id}
+                  onClick={() => handleCardClick(player)}
+                  onItemClick={handleItemClick}
+                />
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
+          <div className="flex gap-2 max-w-sm mx-auto">
             <Button 
               onClick={() => setShowWoundRules(true)}
-              className="bg-blood-red hover:bg-red-700 text-white font-bold text-lg"
+              className="flex-1 bg-blood-red hover:bg-red-700 text-white font-bold text-sm min-h-[48px]"
             >
-              ⚔️ Regras de Combate
+              ⚔️ Regras
             </Button>
             <Button 
               onClick={handleProposeEndGame} 
               disabled={hasPendingProposal}
-              className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg"
+              className="flex-1 bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-sm min-h-[48px] disabled:opacity-50"
             >
-              {hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}
+              {hasPendingProposal ? 'Votando...' : 'Finalizar'}
             </Button>
           </div>
-        </header>
-
-        <main className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {playerList.map(player => (
-            <HeroStatusCard 
-              key={player.id} 
-              player={player}
-              isCurrentUser={player.id === currentUser.id}
-              onClick={() => handleCardClick(player)}
-              onItemClick={handleItemClick}
-            />
-          ))}
-        </main>
+        </div>
       </div>
       
       <ManageHeroModal 

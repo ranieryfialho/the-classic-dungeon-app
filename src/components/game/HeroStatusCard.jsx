@@ -130,7 +130,8 @@ export function HeroStatusCard({
       <Card
         onClick={isCurrentUser ? onClick : null}
         className={`
-          bg-stone-charcoal/80 border-l-8 text-white flex flex-col h-full relative
+          bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative
+          hero-status-card
           ${
             isCurrentUser
               ? "cursor-pointer hover:bg-stone-charcoal transition-colors"
@@ -144,22 +145,25 @@ export function HeroStatusCard({
           <div className="absolute inset-0 bg-blood-red/10 pointer-events-none rounded-md" />
         )}
 
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle className="text-2xl" style={{ color: player.color }}>
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+            <div className="flex-1 min-w-0">
+              <CardTitle 
+                className="text-lg sm:text-2xl character-name truncate" 
+                style={{ color: player.color }}
+              >
                 {player.character.name}
               </CardTitle>
-              <CardDescription className="text-stone-light">
+              <CardDescription className="text-xs sm:text-sm text-stone-light truncate">
                 {player.character.className} - ({player.name})
               </CardDescription>
             </div>
             <div
               onClick={handleWoundClick}
-              className={`font-bold text-sm px-2 py-1 rounded ${
+              className={`font-bold text-xs sm:text-sm px-2 py-1 rounded whitespace-nowrap flex-shrink-0 ${
                 isCurrentUser ? "cursor-pointer hover:bg-blood-red/30 transition-colors" : ""
               }`}
-              title={isCurrentUser ? "Clique para alterar status de ferimento" : ""}
+              title={isCurrentUser ? "Toque para alterar status" : ""}
             >
               {player.isWounded ? (
                 <span className="text-blood-red bg-blood-red/20">FERIDO</span>
@@ -170,57 +174,57 @@ export function HeroStatusCard({
           </div>
         </CardHeader>
         
-        <CardContent className="flex-grow flex flex-col justify-between">
+        <CardContent className="flex-grow flex flex-col justify-between p-3 sm:p-6 pt-0">
           {classData?.gifUrl && (
-            <div className="flex justify-center my-4">
+            <div className="flex justify-center my-2 sm:my-4">
               <img
                 src={classData.gifUrl}
                 alt={`${player.character.name} pixel art`}
-                className="w-24 h-24 object-contain pixelated"
+                className="w-16 h-16 sm:w-24 sm:h-24 object-contain pixelated"
               />
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-2 sm:space-y-4">
             <div>
-              <span className="text-sm text-stone-light flex items-center gap-2">
-                Ouro (Meta: {goldTarget.toLocaleString("pt-BR")})
+              <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
+                <span>Ouro (Meta: {goldTarget.toLocaleString("pt-BR")})</span>
                 {isCurrentUser && (
-                  <span
-                    className="cursor-pointer text-xl hover:scale-110 transition-transform"
+                  <button
+                    className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
                     onClick={toggleGoldVisibility}
                     title={player.isGoldHidden ? "Mostrar Ouro" : "Ocultar Ouro"}
                   >
                     {player.isGoldHidden ? "👁️‍🗨️" : "👁️"}
-                  </span>
+                  </button>
                 )}
               </span>
               {player.isGoldHidden && !isCurrentUser ? (
-                <p className="text-3xl font-bold text-treasure-gold">???</p>
+                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">???</p>
               ) : (
-                <p className="text-3xl font-bold text-treasure-gold">
+                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
                   {player.gold.toLocaleString("pt-BR")}
                 </p>
               )}
             </div>
           </div>
           
-          <div className="mt-4 pt-2 border-t border-stone-light/10">
-            <h5 className="text-sm text-stone-light mb-2">Itens Especiais</h5>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-3 sm:mt-4 pt-2 border-t border-stone-light/10">
+            <h5 className="text-xs sm:text-sm text-stone-light mb-2">Itens Especiais</h5>
+            <div className="flex flex-wrap gap-1 sm:gap-2">
               {player.inventory && player.inventory.length > 0 ? (
                 player.inventory.map((item, index) => (
-                  <span
+                  <button
                     key={index}
                     title={item.description}
-                    className="text-2xl cursor-pointer hover:scale-110 transition-transform"
+                    className="text-lg sm:text-2xl cursor-pointer hover:scale-110 transition-transform p-1"
                     onClick={(e) => {
                       e.stopPropagation();
                       onItemClick(item);
                     }}
                   >
                     {item.icon}
-                  </span>
+                  </button>
                 ))
               ) : (
                 <p className="text-xs text-stone-light/50 italic">Nenhum item</p>
@@ -231,7 +235,7 @@ export function HeroStatusCard({
           {canHeal && (
             <Button
               onClick={handleHeal}
-              className="w-full bg-ethereal-blue/80 hover:bg-ethereal-blue text-dungeon-black font-bold mt-4"
+              className="w-full bg-ethereal-blue/80 hover:bg-ethereal-blue text-dungeon-black font-bold mt-3 sm:mt-4 text-xs sm:text-sm min-h-[40px] sm:min-h-[44px]"
             >
               🛡️ Curar {player.character.name}
             </Button>
@@ -240,25 +244,25 @@ export function HeroStatusCard({
       </Card>
 
       <Dialog open={showWoundModal} onOpenChange={setShowWoundModal}>
-        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-md sm:max-w-lg shadow-2xl">
+        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-[90vw] sm:max-w-md lg:max-w-lg shadow-2xl mx-4">
           <DialogHeader className="text-center pb-2">
-            <DialogTitle className="text-2xl font-bold text-blood-red flex items-center justify-center gap-2">
+            <DialogTitle className="text-xl sm:text-2xl font-bold text-blood-red flex items-center justify-center gap-2">
               ⚔️ Resultado do Combate
             </DialogTitle>
-            <DialogDescription className="text-stone-300 text-sm mt-1">
+            <DialogDescription className="text-stone-300 text-xs sm:text-sm mt-1">
               Escolha o resultado do ataque sofrido pelo herói
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-3 py-2">
+          <div className="space-y-2 sm:space-y-3 py-2 max-h-[60vh] overflow-y-auto">
             <button
               onClick={() => handleWoundTypeSelect('morto')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-900/30 to-red-800/30 hover:from-red-800/50 hover:to-red-700/50 border-2 border-red-600/40 hover:border-red-500/60 transition-all duration-200 p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-900/30 to-red-800/30 hover:from-red-800/50 hover:to-red-700/50 border-2 border-red-600/40 hover:border-red-500/60 transition-all duration-200 p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3 text-left">
-                <div className="text-2xl">💀</div>
-                <div className="flex-1">
-                  <div className="font-bold text-red-400 text-base group-hover:text-red-300">
+              <div className="flex items-start gap-2 sm:gap-3 text-left">
+                <div className="text-xl sm:text-2xl">💀</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-red-400 text-sm sm:text-base group-hover:text-red-300">
                     Herói Morto
                   </div>
                   <div className="text-xs text-stone-400 mt-1 leading-relaxed">
@@ -270,12 +274,12 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('ferimento_grave')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-800/25 to-red-700/25 hover:from-red-700/40 hover:to-red-600/40 border-2 border-red-500/40 hover:border-red-400/60 transition-all duration-200 p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-800/25 to-red-700/25 hover:from-red-700/40 hover:to-red-600/40 border-2 border-red-500/40 hover:border-red-400/60 transition-all duration-200 p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3 text-left">
-                <div className="text-2xl">🩸</div>
-                <div className="flex-1">
-                  <div className="font-bold text-red-300 text-base group-hover:text-red-200">
+              <div className="flex items-start gap-2 sm:gap-3 text-left">
+                <div className="text-xl sm:text-2xl">🩸</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-red-300 text-sm sm:text-base group-hover:text-red-200">
                     Ferimento Grave
                   </div>
                   <div className="text-xs text-stone-400 mt-1 leading-relaxed">
@@ -287,12 +291,12 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('ferimento_leve')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-orange-800/25 to-orange-700/25 hover:from-orange-700/40 hover:to-orange-600/40 border-2 border-orange-500/40 hover:border-orange-400/60 transition-all duration-200 p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-orange-800/25 to-orange-700/25 hover:from-orange-700/40 hover:to-orange-600/40 border-2 border-orange-500/40 hover:border-orange-400/60 transition-all duration-200 p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3 text-left">
-                <div className="text-2xl">🤕</div>
-                <div className="flex-1">
-                  <div className="font-bold text-orange-300 text-base group-hover:text-orange-200">
+              <div className="flex items-start gap-2 sm:gap-3 text-left">
+                <div className="text-xl sm:text-2xl">🤕</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-orange-300 text-sm sm:text-base group-hover:text-orange-200">
                     Ferimento Leve
                   </div>
                   <div className="text-xs text-stone-400 mt-1 leading-relaxed">
@@ -304,12 +308,12 @@ export function HeroStatusCard({
             
             <button
               onClick={() => handleWoundTypeSelect('atordoado')}
-              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-800/25 to-yellow-700/25 hover:from-yellow-700/40 hover:to-yellow-600/40 border-2 border-yellow-500/40 hover:border-yellow-400/60 transition-all duration-200 p-4"
+              className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-800/25 to-yellow-700/25 hover:from-yellow-700/40 hover:to-yellow-600/40 border-2 border-yellow-500/40 hover:border-yellow-400/60 transition-all duration-200 p-3 sm:p-4"
             >
-              <div className="flex items-start gap-3 text-left">
-                <div className="text-2xl">😵</div>
-                <div className="flex-1">
-                  <div className="font-bold text-yellow-300 text-base group-hover:text-yellow-200">
+              <div className="flex items-start gap-2 sm:gap-3 text-left">
+                <div className="text-xl sm:text-2xl">😵</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-yellow-300 text-sm sm:text-base group-hover:text-yellow-200">
                     Atordoado
                   </div>
                   <div className="text-xs text-stone-400 mt-1 leading-relaxed">
@@ -323,21 +327,20 @@ export function HeroStatusCard({
       </Dialog>
 
       <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
-        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-md sm:max-w-lg shadow-2xl max-h-[90vh] overflow-hidden">
+        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white max-w-[90vw] sm:max-w-md lg:max-w-lg shadow-2xl max-h-[90vh] overflow-hidden mx-4">
           <DialogHeader className="text-center pb-2">
-            <DialogTitle className="text-xl font-bold text-blood-red flex items-center justify-center gap-2">
+            <DialogTitle className="text-lg sm:text-xl font-bold text-blood-red flex items-center justify-center gap-2">
               {selectedWoundType === 'ferimento_leve' ? '🤕 Ferimento Leve' : '😵 Atordoado'}
             </DialogTitle>
-            <DialogDescription className="text-stone-300 text-sm">
+            <DialogDescription className="text-stone-300 text-xs sm:text-sm">
               Escolha um item para abandonar e/ou defina a quantidade de ouro a perder
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 overflow-y-auto max-h-[60vh] px-1">
-            {/* Input para remoção de ouro */}
-            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-4 rounded-lg border-2 border-yellow-600/30">
-              <label className="text-sm font-semibold text-yellow-200 block mb-3 flex items-center gap-2">
-                💰 Ouro a remover
+          <div className="space-y-3 sm:space-y-4 overflow-y-auto max-h-[60vh] px-1">
+            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-3 sm:p-4 rounded-lg border-2 border-yellow-600/30">
+              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span>💰 Ouro a remover</span>
                 <span className="text-xs text-stone-400 font-normal">
                   (atual: {player.gold.toLocaleString("pt-BR")})
                 </span>
@@ -348,33 +351,32 @@ export function HeroStatusCard({
                 max={player.gold}
                 value={goldToRemove}
                 onChange={(e) => setGoldToRemove(Math.min(player.gold, Math.max(0, parseInt(e.target.value) || 0)))}
-                className="bg-stone-800/70 border-2 border-stone-600/50 text-white placeholder:text-stone-400 focus:border-yellow-500/50 transition-colors"
+                className="bg-stone-800/70 border-2 border-stone-600/50 text-white placeholder:text-stone-400 focus:border-yellow-500/50 transition-colors text-sm sm:text-base min-h-[44px]"
                 placeholder="Quantidade de ouro"
               />
             </div>
 
-            {/* Lista de itens */}
             {player.inventory && player.inventory.length > 0 && (
               <div>
-                <h4 className="text-sm font-semibold text-stone-300 mb-3 flex items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-semibold text-stone-300 mb-2 sm:mb-3 flex items-center gap-2">
                   🎒 Itens disponíveis:
                 </h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scroll-container">
                   {player.inventory.map((item, index) => (
                     <button
                       key={index}
                       onClick={() => handleItemRemoval(index)}
-                      className="w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 hover:from-red-800/30 hover:to-red-700/30 border-2 border-stone-600/40 hover:border-red-500/50 rounded-lg p-3 transition-all duration-200 text-left"
+                      className="w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 hover:from-red-800/30 hover:to-red-700/30 border-2 border-stone-600/40 hover:border-red-500/50 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center"
                     >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl group-hover:scale-110 transition-transform">
+                      <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
+                        <span className="text-xl sm:text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
                           {item.icon}
                         </span>
-                        <div className="flex-1">
-                          <div className="font-semibold text-sm text-white group-hover:text-red-200">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-xs sm:text-sm text-white group-hover:text-red-200 truncate">
                             {item.name}
                           </div>
-                          <div className="text-xs text-stone-400 mt-1 leading-relaxed">
+                          <div className="text-xs text-stone-400 mt-1 leading-relaxed line-clamp-2">
                             {item.description}
                           </div>
                         </div>
@@ -385,25 +387,23 @@ export function HeroStatusCard({
               </div>
             )}
 
-            {/* Botão para remover apenas ouro (quando não há itens) */}
             {(!player.inventory || player.inventory.length === 0) && (
               <button
                 onClick={handleGoldOnlyRemoval}
                 disabled={goldToRemove === 0}
-                className="w-full bg-gradient-to-r from-yellow-800/30 to-yellow-700/30 hover:from-yellow-700/50 hover:to-yellow-600/50 disabled:from-stone-700/20 disabled:to-stone-600/20 border-2 border-yellow-500/40 hover:border-yellow-400/60 disabled:border-stone-600/30 rounded-lg p-4 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-gradient-to-r from-yellow-800/30 to-yellow-700/30 hover:from-yellow-700/50 hover:to-yellow-600/50 disabled:from-stone-700/20 disabled:to-stone-600/20 border-2 border-yellow-500/40 hover:border-yellow-400/60 disabled:border-stone-600/30 rounded-lg p-3 sm:p-4 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
               >
-                <div className="flex items-center justify-center gap-2 font-semibold">
+                <div className="flex items-center justify-center gap-2 font-semibold text-xs sm:text-sm">
                   💰 Remover apenas ouro ({goldToRemove.toLocaleString("pt-BR")})
                 </div>
               </button>
             )}
           </div>
 
-          {/* Botões de ação */}
-          <div className="flex gap-3 pt-4 border-t border-stone-600/30">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-4 border-t border-stone-600/30">
             <button
               onClick={cancelItemSelection}
-              className="flex-1 bg-gradient-to-r from-stone-600/50 to-stone-500/50 hover:from-stone-500/60 hover:to-stone-400/60 border-2 border-stone-500/50 hover:border-stone-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200"
+              className="flex-1 bg-gradient-to-r from-stone-600/50 to-stone-500/50 hover:from-stone-500/60 hover:to-stone-400/60 border-2 border-stone-500/50 hover:border-stone-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
             >
               Cancelar
             </button>
@@ -411,7 +411,7 @@ export function HeroStatusCard({
             {player.inventory && player.inventory.length > 0 && goldToRemove > 0 && (
               <button
                 onClick={handleGoldOnlyRemoval}
-                className="flex-1 bg-gradient-to-r from-yellow-800/40 to-yellow-700/40 hover:from-yellow-700/60 hover:to-yellow-600/60 border-2 border-yellow-500/50 hover:border-yellow-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200"
+                className="flex-1 bg-gradient-to-r from-yellow-800/40 to-yellow-700/40 hover:from-yellow-700/60 hover:to-yellow-600/60 border-2 border-yellow-500/50 hover:border-yellow-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
               >
                 💰 Só remover ouro
               </button>
