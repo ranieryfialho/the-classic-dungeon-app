@@ -12,18 +12,15 @@ export function PlayerProfile() {
   const { currentUser } = useAuth();
   const { backToMenu } = useMultiplayerGame();
   
-  // Estados para os dados do perfil e do histórico
   const [displayName, setDisplayName] = useState('');
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Estados para as estatísticas
+  
+  // Estados para todas as estatísticas
   const [totalMatches, setTotalMatches] = useState(0);
   const [totalWins, setTotalWins] = useState(0);
-
-  // ++ NOVOS ESTADOS PARA HÁBITOS DO JOGADOR ++
-  const [favoriteClass, setFavoriteClass] = useState(null);
-  const [frequentPlayers, setFrequentPlayers] = useState([]);
+  const [mostPlayedClass, setMostPlayedClass] = useState(null);
+  const [mostPlayedWith, setMostPlayedWith] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +28,6 @@ export function PlayerProfile() {
 
       setLoading(true);
       try {
-        // 1. Buscar dados do perfil (displayName)
         const userDocRef = doc(db, 'users', currentUser.uid);
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
@@ -40,51 +36,58 @@ export function PlayerProfile() {
           setDisplayName(currentUser.email);
         }
 
-        // 2. Buscar histórico de partidas
         const matchesRef = collection(db, 'matches');
-        const q = query(matchesRef, where('players', 'array-contains-any', [{ userId: currentUser.uid }]), orderBy('endedAt', 'desc'));
+        const q = query(
+          matchesRef,
+          where('playerIds', 'array-contains', currentUser.uid),
+          orderBy('endedAt', 'desc')
+        );
+        
         const querySnapshot = await getDocs(q);
-        const userMatches = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(match => match.players.some(player => player.userId === currentUser.uid));
+        const userMatches = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         
         setMatches(userMatches);
 
-        // 3. Calcular estatísticas básicas
-        setTotalMatches(userMatches.length);
-        const wins = userMatches.filter(match => match.winnerId === currentUser.uid).length;
-        setTotalWins(wins);
-
-        // ++ 4. CALCULAR HÁBITOS DO JOGADOR ++
+        // --- LÓGICA DE CÁLCULO DAS ESTATÍSTICAS ---
         if (userMatches.length > 0) {
-          // Calcular classe favorita
-          const classCounts = userMatches.reduce((acc, match) => {
+          // Estatísticas básicas
+          setTotalMatches(userMatches.length);
+          const wins = userMatches.filter(match => match.winnerId === currentUser.uid).length;
+          setTotalWins(wins);
+
+          // Calcular Classe Mais Jogada
+          const classCounts = {};
+          userMatches.forEach(match => {
             const myPlayer = match.players.find(p => p.userId === currentUser.uid);
             if (myPlayer) {
-              acc[myPlayer.characterClass] = (acc[myPlayer.characterClass] || 0) + 1;
+              const className = myPlayer.characterClass;
+              classCounts[className] = (classCounts[className] || 0) + 1;
             }
-            return acc;
-          }, {});
-          const favClass = Object.keys(classCounts).reduce((a, b) => classCounts[a] > classCounts[b] ? a : b);
-          setFavoriteClass(favClass);
+          });
+          const mostPlayed = Object.keys(classCounts).reduce((a, b) => classCounts[a] > classCounts[b] ? a : b);
+          setMostPlayedClass(mostPlayed);
 
-          // Calcular jogadores frequentes
-          const playerCounts = userMatches.reduce((acc, match) => {
-            match.players.forEach(player => {
-              if (player.userId !== currentUser.uid) {
-                acc[player.playerName] = (acc[player.playerName] || 0) + 1;
+          // Calcular Companheiro Mais Frequente
+          const companionCounts = {};
+          userMatches.forEach(match => {
+            match.playerIds.forEach(id => {
+              if (id !== currentUser.uid) {
+                companionCounts[id] = (companionCounts[id] || 0) + 1;
               }
             });
-            return acc;
-          }, {});
-          const sortedPlayers = Object.entries(playerCounts)
-            .sort(([, a], [, b]) => b - a)
-            .slice(0, 3); // Pega o top 3
-          setFrequentPlayers(sortedPlayers);
+          });
+          if (Object.keys(companionCounts).length > 0) {
+            const mostFrequentId = Object.keys(companionCounts).reduce((a, b) => companionCounts[a] > companionCounts[b] ? a : b);
+            const userDoc = await getDoc(doc(db, 'users', mostFrequentId));
+            setMostPlayedWith(userDoc.exists() ? userDoc.data().displayName : 'Companheiro');
+          }
         }
-
+        
       } catch (error) {
-        console.error("Erro ao buscar dados do perfil ou histórico:", error);
+        console.error("ERRO: Verifique se o índice do Firestore foi criado. O link para criação deve estar no erro anterior no console.", error);
       } finally {
         setLoading(false);
       }
@@ -109,10 +112,15 @@ export function PlayerProfile() {
     <div className="min-h-screen w-full flex items-center justify-center bg-dungeon-black bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-ancient-stone via-stone-charcoal to-dungeon-black p-4 md:p-8">
       <div className="max-w-7xl mx-auto w-full">
         <header className="flex justify-between items-center mb-8">
-          <div><h1 className="text-4xl font-bold text-ethereal-blue">Seu Perfil</h1></div>
-          <Button onClick={backToMenu} variant="outline" className="text-white hover:text-white bg-crystal-blue hover:bg-frost-blue">Voltar ao Menu</Button>
+          <div>
+            <h1 className="text-4xl font-bold text-ethereal-blue">Seu Perfil</h1>
+          </div>
+          <div className="flex space-x-2">
+            <Button onClick={backToMenu} variant="outline" className="bg-weathered-gray hover:bg-stone-light">
+              Voltar ao Menu
+            </Button>
+          </div>
         </header>
-
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="space-y-8">
             <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
@@ -125,43 +133,31 @@ export function PlayerProfile() {
                 <Button onClick={handleSaveProfile} className="w-full bg-crystal-blue hover:bg-frost-blue">Salvar Alterações</Button>
               </CardContent>
             </Card>
-
             <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
               <CardHeader><CardTitle className="text-2xl text-frost-blue">📊 Estatísticas</CardTitle></CardHeader>
               <CardContent className="space-y-4 text-lg">
-                <div className="flex justify-between items-center"><span className="text-stone-light">Partidas Jogadas:</span><span className="font-bold text-white">{loading ? '...' : totalMatches}</span></div>
-                <div className="flex justify-between items-center"><span className="text-stone-light">Vitórias:</span><span className="font-bold text-treasure-gold">{loading ? '...' : totalWins}</span></div>
-                <div className="flex justify-between items-center"><span className="text-stone-light">Taxa de Vitória:</span><span className="font-bold text-white">{loading ? '...' : (totalMatches > 0 ? `${((totalWins / totalMatches) * 100).toFixed(0)}%` : '0%')}</span></div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-stone-charcoal/80 border-stone-light/20 text-white">
-              <CardHeader><CardTitle className="text-2xl text-frost-blue">⚔️ Tendências</CardTitle></CardHeader>
-              <CardContent className="space-y-4 text-lg">
                 <div className="flex justify-between items-center">
-                  <span className="text-stone-light">Classe Favorita:</span>
-                  <span className="font-bold text-ethereal-blue">{loading ? '...' : (favoriteClass || 'N/A')}</span>
+                  <span className="text-stone-light">Partidas Jogadas:</span>
+                  <span className="font-bold text-white">{loading ? '...' : totalMatches}</span>
                 </div>
-                <div>
-                  <span className="text-stone-light">Companheiros Frequentes:</span>
-                  {loading ? <p className="text-sm text-white">...</p> : (
-                    <ul className="text-base mt-2 space-y-1">
-                      {frequentPlayers.length > 0 ? frequentPlayers.map(([name, count]) => (
-                        <li key={name} className="flex justify-between">
-                          <span className="font-semibold text-white">{name}</span>
-                          <span className="text-stone-light">{count} {count > 1 ? 'jogos' : 'jogo'}</span>
-                        </li>
-                      )) : <p className="text-sm text-stone-light/70">Nenhum companheiro registrado</p>}
-                    </ul>
-                  )}
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-light">Vitórias:</span>
+                  <span className="font-bold text-treasure-gold">{loading ? '...' : totalWins}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-light">Classe Preferida:</span>
+                  <span className="font-bold text-white">{loading ? '...' : (mostPlayedClass || 'N/A')}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-light">Principal Aliado:</span>
+                  <span className="font-bold text-white">{loading ? '...' : (mostPlayedWith || 'N/A')}</span>
                 </div>
               </CardContent>
             </Card>
           </div>
-
           <Card className="lg:col-span-2 bg-stone-charcoal/80 border-stone-light/20 text-white">
             <CardHeader><CardTitle className="text-2xl text-frost-blue">📜 Histórico de Partidas</CardTitle></CardHeader>
-            <CardContent className="max-h-[44rem] overflow-y-auto">
+            <CardContent className="max-h-[30rem] overflow-y-auto">
               {loading && <p className="text-stone-light">Carregando histórico...</p>}
               {!loading && matches.length === 0 && <p className="text-stone-light">Nenhuma partida encontrada.</p>}
               <div className="space-y-4">

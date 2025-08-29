@@ -264,10 +264,18 @@ export function MultiplayerProvider({ children }) {
       characterClass: p.character.className, gold: p.gold,
       inventory: p.inventory.map(item => ({ id: item.id, name: item.name })),
     }));
+
+    const playerIds = playerList.map(p => p.id);
+
     try {
       await addDoc(collection(db, "matches"), {
-        roomId: room.id, winnerId: winner.id, winnerName: winner.name,
-        endedAt: serverTimestamp(), playerCount: playerList.length, players: playersSnapshot,
+        roomId: room.id, 
+        winnerId: winner.id, 
+        winnerName: winner.name,
+        endedAt: serverTimestamp(), 
+        playerCount: playerList.length, 
+        players: playersSnapshot,
+        playerIds: playerIds,
       });
       await deleteDoc(doc(db, "rooms", room.id));
     } catch (error) { console.error("Erro ao salvar o histórico ou deletar a sala:", error); }
