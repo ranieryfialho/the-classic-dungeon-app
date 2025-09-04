@@ -25,7 +25,7 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
 
   const handleSave = () => {
     updatePlayerStats(player.id, {
-      gold: parseInt(gold, 10) || 0, // Garante que o ouro seja um número
+      gold: parseInt(gold, 10) || 0,
     });
     onClose();
   };
@@ -34,6 +34,12 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
     if (itemId) {
       addItemToInventory(player.id, itemId);
     }
+  };
+
+  const adjustGold = (amount) => {
+    const currentGold = parseInt(gold, 10) || 0;
+    const newGold = Math.max(0, currentGold + amount);
+    setGold(newGold);
   };
 
   if (!player) return null;
@@ -47,7 +53,6 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-6 py-4">
-          {/* SEÇÃO DO OURO */}
           <div className="space-y-2">
             <Label
               htmlFor="gold"
@@ -63,18 +68,20 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
                 onChange={(e) => setGold(e.target.value)}
                 className="col-span-3 bg-dungeon-black border-stone-light/30"
               />
-              <Button onClick={handleSave} className="bg-treasure-gold hover:bg-yellow-600 text-black font-bold">
-                Salvar Ouro
-              </Button>
             </div>
+            <div className="grid grid-cols-4 gap-2 pt-2">
+                <Button onClick={() => adjustGold(100)} variant="outline" className="bg-treasure-gold/20 border-treasure-gold/50 hover:bg-treasure-gold/30 text-treasure-gold font-bold">+100</Button>
+                <Button onClick={() => adjustGold(250)} variant="outline" className="bg-treasure-gold/20 border-treasure-gold/50 hover:bg-treasure-gold/30 text-treasure-gold font-bold">+250</Button>
+                <Button onClick={() => adjustGold(500)} variant="outline" className="bg-treasure-gold/20 border-treasure-gold/50 hover:bg-treasure-gold/30 text-treasure-gold font-bold">+500</Button>
+                <Button onClick={() => adjustGold(-100)} variant="outline" className="bg-blood-red/20 border-blood-red/50 hover:bg-blood-red/30 text-blood-red font-bold">-100</Button>
+            </div>
+            {/* ===== FIM DA MELHORIA ===== */}
           </div>
 
-          {/* SEÇÃO DO INVENTÁRIO E ADIÇÃO DE ITENS */}
           <div className="space-y-4">
             <h4 className="font-bold text-lg text-frost-blue border-b border-stone-light/20 pb-2">
               Inventário
             </h4>
-            {/* Itens Atuais */}
             <div className="space-y-2 max-h-24 overflow-y-auto pr-2">
               {player.inventory && player.inventory.length > 0 ? (
                 player.inventory.map((item, index) => (
@@ -100,7 +107,6 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
               )}
             </div>
 
-            {/* ===== INÍCIO DA MELHORIA: SELEÇÃO VISUAL ===== */}
             <h5 className="font-semibold text-base text-frost-blue pt-2">
               Adicionar Tesouro Especial
             </h5>
@@ -117,16 +123,14 @@ export function ManageHeroModal({ player, isOpen, onClose }) {
                 </Button>
               ))}
             </div>
-            {/* ===== FIM DA MELHORIA ===== */}
-
           </div>
         </div>
         <DialogFooter>
           <Button
-            onClick={onClose}
+            onClick={handleSave}
             className="bg-crystal-blue hover:bg-frost-blue text-white w-full"
           >
-            Fechar
+            Salvar e Fechar
           </Button>
         </DialogFooter>
       </DialogContent>
