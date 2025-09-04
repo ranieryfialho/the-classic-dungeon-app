@@ -10,7 +10,14 @@ import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export function HeroStatusCard({
   player,
@@ -22,8 +29,9 @@ export function HeroStatusCard({
   const [showWoundModal, setShowWoundModal] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [selectedWoundType, setSelectedWoundType] = useState(null);
+  const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
-  
+
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
   );
@@ -57,88 +65,178 @@ export function HeroStatusCard({
 
   const handleWoundTypeSelect = (woundType) => {
     setSelectedWoundType(woundType);
-    setGoldToRemove(0);
-    
+    setShowWoundModal(false);
+
     switch (woundType) {
-      case 'morto':
-        updatePlayerStats(player.id, { 
+      case "morto":
+        updatePlayerStats(player.id, {
           isWounded: true,
           inventory: [],
-          gold: 0
+          gold: 0,
         });
-        setShowWoundModal(false);
         break;
-        
-      case 'ferimento_grave':
-        const halfCards = Math.floor(player.inventory.length / 2);
-        const newInventory = player.inventory.slice(halfCards);
-        updatePlayerStats(player.id, { 
-          isWounded: true,
-          inventory: newInventory
-        });
-        setShowWoundModal(false);
-        break;
-        
-      case 'ferimento_leve':
-      case 'atordoado':
-        if (player.inventory.length > 0) {
+
+      case "ferimento_grave":
+      case "ferimento_leve":
+      case "atordoado":
+        if (player.inventory.length > 0 || player.gold > 0) {
           setShowItemSelection(true);
         } else {
           updatePlayerStats(player.id, { isWounded: true });
         }
-        setShowWoundModal(false);
         break;
-        
+
       default:
-        setShowWoundModal(false);
+        break;
     }
   };
 
-  const handleItemRemoval = (itemIndex) => {
-    const newInventory = player.inventory.filter((_, index) => index !== itemIndex);
-    const newGold = Math.max(0, player.gold - goldToRemove);
-    
-    updatePlayerStats(player.id, { 
-      isWounded: true,
-      inventory: newInventory,
-      gold: newGold
+  const handleItemToggleForDiscard = (itemIndex) => {
+    setItemsToDiscard((prev) => {
+      if (prev.includes(itemIndex)) {
+        return prev.filter((i) => i !== itemIndex);
+      }
+      return [...prev, itemIndex];
     });
-    setShowItemSelection(false);
-    setSelectedWoundType(null);
-    setGoldToRemove(0);
   };
 
-  const handleGoldOnlyRemoval = () => {
-    const newGold = Math.max(0, player.gold - goldToRemove);
-    updatePlayerStats(player.id, { 
+  const handleConfirmPenalty = () => {
+    const finalInventory = player.inventory.filter(
+      (_, index) => !itemsToDiscard.includes(index)
+    );
+    const finalGold = player.gold - goldToRemove;
+
+    updatePlayerStats(player.id, {
       isWounded: true,
-      gold: newGold
+      inventory: finalInventory,
+      gold: Math.max(0, finalGold),
     });
-    setShowItemSelection(false);
-    setSelectedWoundType(null);
-    setGoldToRemove(0);
+
+    cancelItemSelection();
   };
 
   const cancelItemSelection = () => {
     setShowItemSelection(false);
     setSelectedWoundType(null);
+    setItemsToDiscard([]);
     setGoldToRemove(0);
+  };
+
+  const renderItemSelectionModal = () => {
+    if (!selectedWoundType) return null;
+
+    const titles = {
+      ferimento_grave: "🩸 Ferimento Grave",
+      ferimento_leve: "🤕 Ferimento Leve",
+      atordoado: "😵 Atordoado",
+    };
+
+    const descriptions = {
+      ferimento_grave:
+        "Abandone metade de seus tesouros (arredondado para cima) entre itens e ouro.",
+      ferimento_leve: "Abandone um de seus tesouros e/ou ouro.",
+      atordoado: "Abandone um dos tesouros e/ou ouro.",
+    };
+
+    const isPenaltySelected = itemsToDiscard.length > 0 || goldToRemove > 0;
+
+    return (
+      <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
+        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white w-[95vw] max-w-[400px] sm:max-w-md lg:max-w-lg h-[85vh] max-h-[700px] sm:max-h-[90vh] shadow-2xl p-3 sm:p-6 overflow-hidden flex flex-col">
+          <DialogHeader className="text-center pb-2 flex-shrink-0">
+            <DialogTitle className="text-base sm:text-xl font-bold text-blood-red">
+              {titles[selectedWoundType]}
+            </DialogTitle>
+            <DialogDescription className="text-stone-300 text-xs sm:text-sm">
+              {descriptions[selectedWoundType]}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto">
+            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-2 sm:p-4 rounded-lg border-2 border-yellow-600/30">
+              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3">
+                💰 Ouro a remover (atual: {player.gold.toLocaleString("pt-BR")})
+              </label>
+              <Input
+                type="number"
+                min="0"
+                max={player.gold}
+                value={goldToRemove}
+                onChange={(e) =>
+                  setGoldToRemove(
+                    Math.min(
+                      player.gold,
+                      Math.max(0, parseInt(e.target.value) || 0)
+                    )
+                  )
+                }
+                className="bg-stone-800/70 border-2 border-stone-600/50 text-white"
+              />
+            </div>
+
+            {player.inventory.length > 0 && (
+              <div>
+                <h4 className="text-xs sm:text-sm font-semibold text-stone-300 mb-2 sm:mb-3">
+                  🎒 Itens a abandonar ({itemsToDiscard.length} selecionado(s)):
+                </h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scroll-container">
+                  {player.inventory.map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={() => handleItemToggleForDiscard(index)}
+                      className={cn(
+                        "w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 border-2 border-stone-600/40 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center",
+                        itemsToDiscard.includes(index)
+                          ? "border-red-500/80 ring-2 ring-red-500/50 bg-red-900/30"
+                          : "hover:border-stone-400/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
+                        <span className="text-lg sm:text-2xl">{item.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-xs sm:text-sm text-white truncate">
+                            {item.name}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 border-t border-stone-600/30 flex-shrink-0">
+            <Button
+              onClick={cancelItemSelection}
+              variant="secondary"
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleConfirmPenalty}
+              disabled={!isPenaltySelected}
+              className="flex-1 bg-blood-red hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Confirmar Penalidade
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
   };
 
   return (
     <>
       <Card
         onClick={isCurrentUser ? onClick : null}
-        className={`
-          bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative
-          hero-status-card
-          ${
-            isCurrentUser
-              ? "cursor-pointer hover:bg-stone-charcoal transition-colors"
-              : ""
-          }
-          ${player.isWounded ? "shadow-lg shadow-blood-red/20" : ""}
-        `}
+        className={cn(
+          "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card",
+          isCurrentUser &&
+            "cursor-pointer hover:bg-stone-charcoal transition-colors",
+          player.isWounded && "shadow-lg shadow-blood-red/20"
+        )}
         style={{ borderColor: player.color }}
       >
         {player.isWounded && (
@@ -148,8 +246,8 @@ export function HeroStatusCard({
         <CardHeader className="p-3 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="flex-1 min-w-0">
-              <CardTitle 
-                className="text-lg sm:text-2xl character-name truncate" 
+              <CardTitle
+                className="text-lg sm:text-2xl character-name truncate"
                 style={{ color: player.color }}
               >
                 {player.character.name}
@@ -160,9 +258,11 @@ export function HeroStatusCard({
             </div>
             <div
               onClick={handleWoundClick}
-              className={`font-bold text-xs sm:text-sm px-2 py-1 rounded whitespace-nowrap flex-shrink-0 ${
-                isCurrentUser ? "cursor-pointer hover:bg-blood-red/30 transition-colors" : ""
-              }`}
+              className={cn(
+                "font-bold text-xs sm:text-sm px-2 py-1 rounded whitespace-nowrap flex-shrink-0",
+                isCurrentUser &&
+                  "cursor-pointer hover:bg-blood-red/30 transition-colors"
+              )}
               title={isCurrentUser ? "Toque para alterar status" : ""}
             >
               {player.isWounded ? (
@@ -173,7 +273,7 @@ export function HeroStatusCard({
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="flex-grow flex flex-col justify-between p-3 sm:p-6 pt-0">
           {classData?.gifUrl && (
             <div className="flex justify-center my-2 sm:my-4">
@@ -193,14 +293,18 @@ export function HeroStatusCard({
                   <button
                     className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
                     onClick={toggleGoldVisibility}
-                    title={player.isGoldHidden ? "Mostrar Ouro" : "Ocultar Ouro"}
+                    title={
+                      player.isGoldHidden ? "Mostrar Ouro" : "Ocultar Ouro"
+                    }
                   >
                     {player.isGoldHidden ? "👁️‍🗨️" : "👁️"}
                   </button>
                 )}
               </span>
               {player.isGoldHidden && !isCurrentUser ? (
-                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">???</p>
+                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+                  ???
+                </p>
               ) : (
                 <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
                   {player.gold.toLocaleString("pt-BR")}
@@ -208,9 +312,11 @@ export function HeroStatusCard({
               )}
             </div>
           </div>
-          
+
           <div className="mt-3 sm:mt-4 pt-2 border-t border-stone-light/10">
-            <h5 className="text-xs sm:text-sm text-stone-light mb-2">Itens Especiais</h5>
+            <h5 className="text-xs sm:text-sm text-stone-light mb-2">
+              Itens Especiais
+            </h5>
             <div className="flex flex-wrap gap-1 sm:gap-2">
               {player.inventory && player.inventory.length > 0 ? (
                 player.inventory.map((item, index) => (
@@ -227,11 +333,13 @@ export function HeroStatusCard({
                   </button>
                 ))
               ) : (
-                <p className="text-xs text-stone-light/50 italic">Nenhum item</p>
+                <p className="text-xs text-stone-light/50 italic">
+                  Nenhum item
+                </p>
               )}
             </div>
           </div>
-          
+
           {canHeal && (
             <Button
               onClick={handleHeal}
@@ -253,10 +361,10 @@ export function HeroStatusCard({
               Escolha o resultado do ataque sofrido pelo herói
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-2 sm:space-y-3 flex-1 overflow-y-auto">
             <button
-              onClick={() => handleWoundTypeSelect('morto')}
+              onClick={() => handleWoundTypeSelect("morto")}
               className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-900/30 to-red-800/30 hover:from-red-800/50 hover:to-red-700/50 border-2 border-red-600/40 hover:border-red-500/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
@@ -265,58 +373,55 @@ export function HeroStatusCard({
                   <div className="font-bold text-red-400 text-sm sm:text-base group-hover:text-red-300">
                     Herói Morto
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
-                    Abandone todos os tesouros. Pegue seu guerreiro e comece novamente.
+                  <div className="text-xs text-stone-400 mt-1">
+                    Abandone todos os tesouros e comece novamente.
                   </div>
                 </div>
               </div>
             </button>
-            
             <button
-              onClick={() => handleWoundTypeSelect('ferimento_grave')}
+              onClick={() => handleWoundTypeSelect("ferimento_grave")}
               className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-red-800/25 to-red-700/25 hover:from-red-700/40 hover:to-red-600/40 border-2 border-red-500/40 hover:border-red-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
                 <div className="text-lg sm:text-2xl">🩸</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-red-300 text-sm sm:text-base group-hover:text-red-200">
+                  <div className="font-bold text-red-300 text-sm sm:text-base">
                     Ferimento Grave
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
-                    Abandone metade de seu tesouro em quantidade de cartas e volte para a Escadaria Principal.
+                  <div className="text-xs text-stone-400 mt-1">
+                    Abandone metade de seu tesouro e volte para a escada.
                   </div>
                 </div>
               </div>
             </button>
-            
             <button
-              onClick={() => handleWoundTypeSelect('ferimento_leve')}
+              onClick={() => handleWoundTypeSelect("ferimento_leve")}
               className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-orange-800/25 to-orange-700/25 hover:from-orange-700/40 hover:to-orange-600/40 border-2 border-orange-500/40 hover:border-orange-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
                 <div className="text-lg sm:text-2xl">🤕</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-orange-300 text-sm sm:text-base group-hover:text-orange-200">
+                  <div className="font-bold text-orange-300 text-sm sm:text-base">
                     Ferimento Leve
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
-                    Abandone um de seus tesouros (livre escolha) e volte uma casa em relação ao monstro. Pule uma jogada.
+                  <div className="text-xs text-stone-400 mt-1">
+                    Abandone um tesouro, volte uma casa e pule uma jogada.
                   </div>
                 </div>
               </div>
             </button>
-            
             <button
-              onClick={() => handleWoundTypeSelect('atordoado')}
+              onClick={() => handleWoundTypeSelect("atordoado")}
               className="w-full group relative overflow-hidden rounded-lg bg-gradient-to-r from-yellow-800/25 to-yellow-700/25 hover:from-yellow-700/40 hover:to-yellow-600/40 border-2 border-yellow-500/40 hover:border-yellow-400/60 transition-all duration-200 p-2 sm:p-4"
             >
               <div className="flex items-start gap-2 sm:gap-3 text-left">
                 <div className="text-lg sm:text-2xl">😵</div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-yellow-300 text-sm sm:text-base group-hover:text-yellow-200">
+                  <div className="font-bold text-yellow-300 text-sm sm:text-base">
                     Atordoado
                   </div>
-                  <div className="text-xs text-stone-400 mt-1 leading-tight sm:leading-relaxed">
+                  <div className="text-xs text-stone-400 mt-1">
                     Abandone um dos tesouros.
                   </div>
                 </div>
@@ -326,99 +431,7 @@ export function HeroStatusCard({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
-        <DialogContent className="bg-gradient-to-b from-stone-800 to-stone-900 border-2 border-stone-600/50 text-white w-[95vw] max-w-[400px] sm:max-w-md lg:max-w-lg h-[85vh] max-h-[700px] sm:max-h-[90vh] shadow-2xl p-3 sm:p-6 overflow-hidden flex flex-col">
-          <DialogHeader className="text-center pb-2 flex-shrink-0">
-            <DialogTitle className="text-base sm:text-xl font-bold text-blood-red flex items-center justify-center gap-2">
-              {selectedWoundType === 'ferimento_leve' ? '🤕 Ferimento Leve' : '😵 Atordoado'}
-            </DialogTitle>
-            <DialogDescription className="text-stone-300 text-xs sm:text-sm">
-              Escolha um item para abandonar e/ou defina a quantidade de ouro a perder
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto">
-            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-2 sm:p-4 rounded-lg border-2 border-yellow-600/30">
-              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3 flex flex-col gap-1">
-                <span>💰 Ouro a remover</span>
-                <span className="text-xs text-stone-400 font-normal">
-                  (atual: {player.gold.toLocaleString("pt-BR")})
-                </span>
-              </label>
-              <Input
-                type="number"
-                min="0"
-                max={player.gold}
-                value={goldToRemove}
-                onChange={(e) => setGoldToRemove(Math.min(player.gold, Math.max(0, parseInt(e.target.value) || 0)))}
-                className="bg-stone-800/70 border-2 border-stone-600/50 text-white placeholder:text-stone-400 focus:border-yellow-500/50 transition-colors text-sm sm:text-base min-h-[44px]"
-                placeholder="Quantidade de ouro"
-              />
-            </div>
-
-            {player.inventory && player.inventory.length > 0 && (
-              <div>
-                <h4 className="text-xs sm:text-sm font-semibold text-stone-300 mb-2 sm:mb-3 flex items-center gap-2">
-                  🎒 Itens disponíveis:
-                </h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scroll-container">
-                  {player.inventory.map((item, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleItemRemoval(index)}
-                      className="w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 hover:from-red-800/30 hover:to-red-700/30 border-2 border-stone-600/40 hover:border-red-500/50 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
-                        <span className="text-lg sm:text-2xl group-hover:scale-110 transition-transform flex-shrink-0">
-                          {item.icon}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-xs sm:text-sm text-white group-hover:text-red-200 truncate">
-                            {item.name}
-                          </div>
-                          <div className="text-xs text-stone-400 mt-1 leading-tight line-clamp-2">
-                            {item.description}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {(!player.inventory || player.inventory.length === 0) && (
-              <button
-                onClick={handleGoldOnlyRemoval}
-                disabled={goldToRemove === 0}
-                className="w-full bg-gradient-to-r from-yellow-800/30 to-yellow-700/30 hover:from-yellow-700/50 hover:to-yellow-600/50 disabled:from-stone-700/20 disabled:to-stone-600/20 border-2 border-yellow-500/40 hover:border-yellow-400/60 disabled:border-stone-600/30 rounded-lg p-3 sm:p-4 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px]"
-              >
-                <div className="flex items-center justify-center gap-2 font-semibold text-xs sm:text-sm">
-                  💰 Remover apenas ouro ({goldToRemove.toLocaleString("pt-BR")})
-                </div>
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-3 border-t border-stone-600/30 flex-shrink-0">
-            <button
-              onClick={cancelItemSelection}
-              className="flex-1 bg-gradient-to-r from-stone-600/50 to-stone-500/50 hover:from-stone-500/60 hover:to-stone-400/60 border-2 border-stone-500/50 hover:border-stone-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
-            >
-              Cancelar
-            </button>
-            
-            {player.inventory && player.inventory.length > 0 && goldToRemove > 0 && (
-              <button
-                onClick={handleGoldOnlyRemoval}
-                className="flex-1 bg-gradient-to-r from-yellow-800/40 to-yellow-700/40 hover:from-yellow-700/60 hover:to-yellow-600/60 border-2 border-yellow-500/50 hover:border-yellow-400/60 rounded-lg py-2.5 px-4 font-semibold transition-all duration-200 text-xs sm:text-sm min-h-[44px]"
-              >
-                💰 Só remover ouro
-              </button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {renderItemSelectionModal()}
     </>
   );
 }
