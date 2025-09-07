@@ -49,14 +49,14 @@ export function HeroStatusCard({
 
   const handleHeal = (e) => {
     e.stopPropagation();
-    updatePlayerStats(player.id, { isWounded: false });
+    updatePlayerStats(player.id, { isWounded: false, woundType: null, skipTurn: false });
   };
 
   const handleWoundClick = (e) => {
     e.stopPropagation();
     if (isCurrentUser) {
       if (player.isWounded) {
-        updatePlayerStats(player.id, { isWounded: false });
+        updatePlayerStats(player.id, { isWounded: false, woundType: null, skipTurn: false });
       } else if (player.isStunned) {
         updatePlayerStats(player.id, { isStunned: false });
       } else {
@@ -83,6 +83,8 @@ export function HeroStatusCard({
           isStunned: false,
           inventory: [],
           gold: 0,
+          woundType: null,
+          skipTurn: false,
         });
         
         setTimeout(() => {
@@ -121,12 +123,21 @@ export function HeroStatusCard({
       gold: finalGold,
     };
 
-    if (selectedWoundType === 'ferimento_grave' || selectedWoundType === 'ferimento_leve') {
-      newStats.isWounded = true;
-      newStats.isStunned = false;
+    if (selectedWoundType === 'ferimento_grave') {
+        newStats.isWounded = true;
+        newStats.isStunned = false;
+        newStats.woundType = 'grave';
+        newStats.skipTurn = false;
+    } else if (selectedWoundType === 'ferimento_leve') {
+        newStats.isWounded = true;
+        newStats.isStunned = false;
+        newStats.woundType = 'leve';
+        newStats.skipTurn = true;
     } else if (selectedWoundType === 'atordoado') {
-      newStats.isWounded = false;
-      newStats.isStunned = true;
+        newStats.isWounded = false;
+        newStats.isStunned = true;
+        newStats.woundType = null;
+        newStats.skipTurn = false;
     }
 
     updatePlayerStats(player.id, newStats);
@@ -288,8 +299,10 @@ export function HeroStatusCard({
             >
               {showDeadStatus ? (
                 <span className="text-red-600 bg-red-900/30">MORTO</span>
-              ) : player.isWounded ? (
-                <span className="text-blood-red bg-blood-red/20">FERIDO</span>
+              ) : player.woundType === 'grave' ? (
+                <span className="text-red-400 bg-red-900/30">FERIMENTO GRAVE</span>
+              ) : player.woundType === 'leve' ? (
+                <span className="text-orange-400 bg-orange-900/30">FERIMENTO LEVE</span>
               ) : player.isStunned ? (
                 <span className="text-yellow-400 bg-yellow-800/20">ATORDOADO</span>
               ) : (
@@ -337,6 +350,11 @@ export function HeroStatusCard({
               )}
             </div>
           </div>
+          {player.woundType === 'leve' && (
+            <div className="text-orange-400 text-sm font-bold mt-2">
+              Volta 1 Casa / Pula 1 Turno
+            </div>
+          )}
 
           <div className="mt-3 sm:mt-4 pt-3 border-t border-stone-light/10">
             <h5 className="text-xs sm:text-sm text-stone-light mb-2">
@@ -431,7 +449,7 @@ export function HeroStatusCard({
                     Ferimento Leve
                   </div>
                   <div className="text-xs text-stone-400 mt-1">
-                    Abandone um tesouro, volte uma casa e pule uma jogada.
+                    Abandone um tesouro, volte uma casa em relação ao monstro. Pule uma jogada.
                   </div>
                 </div>
               </div>
