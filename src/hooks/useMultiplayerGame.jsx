@@ -55,7 +55,7 @@ export function MultiplayerProvider({ children }) {
     }
   }, []);
 
-  // ===== ORDEM CORRIGIDA: Funções declaradas antes de serem usadas =====
+  // ===== ORDEM CORRIGIDA: FunÃ§Ãµes declaradas antes de serem usadas =====
 
   const setupRealtimeListener = useCallback(
     (roomId) => {
@@ -98,7 +98,7 @@ export function MultiplayerProvider({ children }) {
           console.error("onSnapshot error:", error);
           setGameState((prev) => ({
             ...prev,
-            connectionError: "Problema de conexão com a sala.",
+            connectionError: "Problema de conexÃ£o com a sala.",
           }));
         }
       );
@@ -112,7 +112,7 @@ export function MultiplayerProvider({ children }) {
     try {
       await runTransaction(db, async (transaction) => {
         const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Sala não encontrada");
+        if (!roomDoc.exists()) throw new Error("Sala nÃ£o encontrada");
         let playersList = roomDoc.data().players || [];
         if (!playersList.some((p) => p.id === authUser.uid)) {
           if (playersList.length >= 6) throw new Error("Sala cheia");
@@ -132,6 +132,7 @@ export function MultiplayerProvider({ children }) {
             gold: 0,
             isWounded: false,
             inventory: [],
+            isGoldHidden: true, // ALTERAÇÃO: Ouro oculto por padrão
           });
           transaction.update(roomRef, { players: playersList });
         }
@@ -141,8 +142,8 @@ export function MultiplayerProvider({ children }) {
       return true;
     } catch (e) {
       console.error("Erro ao entrar na sala:", e.message);
-      if (e.message === "Sala cheia") alert("A sala está cheia.");
-      if (e.message === "Sala não encontrada") alert("Sala não encontrada.");
+      if (e.message === "Sala cheia") alert("A sala estÃ¡ cheia.");
+      if (e.message === "Sala nÃ£o encontrada") alert("Sala nÃ£o encontrada.");
       return false;
     }
   }, [authUser, saveRoomId, setupRealtimeListener]
@@ -188,13 +189,13 @@ export function MultiplayerProvider({ children }) {
     try {
       await runTransaction(db, async (transaction) => {
         const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Sala não encontrada!");
+        if (!roomDoc.exists()) throw new Error("Sala nÃ£o encontrada!");
         const currentPlayers = roomDoc.data().players || [];
         const newPlayers = updateLogic(currentPlayers);
         transaction.update(roomRef, { players: newPlayers, lastUpdated: serverTimestamp() });
       });
     } catch (error) {
-      console.error("Falha na transação de atualização de jogador:", error);
+      console.error("Falha na transaÃ§Ã£o de atualizaÃ§Ã£o de jogador:", error);
     }
   }, [gameState.room?.id]);
 
@@ -227,6 +228,7 @@ export function MultiplayerProvider({ children }) {
       gold: 0,
       isWounded: false,
       inventory: [],
+      isGoldHidden: true, // ALTERAÇÃO: Ouro oculto por padrão
     };
     await setDoc(doc(db, "rooms", roomId), {
       id: roomId,
@@ -269,7 +271,12 @@ export function MultiplayerProvider({ children }) {
   const goToProfile = useCallback(() => setGameState((s) => ({ ...s, gamePhase: "profile" })), []);
   const startGameSelection = useCallback(() => updateRoomData({ gamePhase: "selection" }), [updateRoomData]);
 
-  const startGame = useCallback(() => runPlayerUpdateTransaction(players => players.map(p => ({ ...p, gold: 0, isWounded: false, inventory: [] })))
+  const startGame = useCallback(() => runPlayerUpdateTransaction(players => players.map(p => ({
+    ...p,
+    gold: 0,
+    isWounded: false,
+    inventory: []
+  })))
     .then(() => updateRoomData({ gamePhase: "playing" })), [runPlayerUpdateTransaction, updateRoomData]);
 
   const selectCharacterForPlayer = useCallback((playerId, character) => runPlayerUpdateTransaction(players => players.map(p => p.id === playerId ? { ...p, character, ready: true } : p)), [runPlayerUpdateTransaction]);

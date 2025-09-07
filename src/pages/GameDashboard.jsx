@@ -31,6 +31,8 @@ export function GameDashboard() {
     if (!currentUser || !currentUser.character) return;
     const classData = characterClasses.find(c => c.name === currentUser.character.className);
     if (!classData) return;
+    
+    // ALTERAÇÃO: Verificar se o jogador atingiu sua meta para permitir propor fim do jogo
     if (currentUser.gold >= classData.goldTarget) {
       proposeEndGame();
     } else {
@@ -62,7 +64,15 @@ export function GameDashboard() {
         <main className="container-mobile-safe pb-20 sm:pb-8">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-              {playerList.map(player => (<HeroStatusCard key={player.id} player={player} isCurrentUser={player.id === currentUser.id} onClick={() => handleCardClick(player)} onItemClick={handleItemClick}/>))}
+              {playerList.map(player => (
+                <HeroStatusCard 
+                  key={player.id} 
+                  player={player} 
+                  isCurrentUser={player.id === currentUser.id} 
+                  onClick={() => handleCardClick(player)} 
+                  onItemClick={handleItemClick}
+                />
+              ))}
             </div>
           </div>
         </main>

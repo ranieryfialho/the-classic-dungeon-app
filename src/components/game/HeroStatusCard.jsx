@@ -31,6 +31,7 @@ export function HeroStatusCard({
   const [selectedWoundType, setSelectedWoundType] = useState(null);
   const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
+  const [hideMyGold, setHideMyGold] = useState(false);
 
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
@@ -42,14 +43,13 @@ export function HeroStatusCard({
     player.isWounded &&
     !isCurrentUser;
 
+  // Lógica de visibilidade do ouro
+  const shouldShowGold = isCurrentUser ? !hideMyGold : false;
+  const shouldShowTarget = isCurrentUser;
+
   const handleHeal = (e) => {
     e.stopPropagation();
     updatePlayerStats(player.id, { isWounded: false });
-  };
-
-  const toggleGoldVisibility = (e) => {
-    e.stopPropagation();
-    updatePlayerStats(player.id, { isGoldHidden: !player.isGoldHidden });
   };
 
   const handleWoundClick = (e) => {
@@ -61,6 +61,11 @@ export function HeroStatusCard({
         setShowWoundModal(true);
       }
     }
+  };
+
+  const handleGoldToggle = (e) => {
+    e.stopPropagation();
+    setHideMyGold(prev => !prev);
   };
 
   const handleWoundTypeSelect = (woundType) => {
@@ -288,26 +293,26 @@ export function HeroStatusCard({
           <div className="space-y-2 sm:space-y-4">
             <div>
               <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span>Ouro (Meta: {goldTarget.toLocaleString("pt-BR")})</span>
+                <span>
+                  Ouro {shouldShowTarget && `(Meta: ${goldTarget.toLocaleString("pt-BR")})`}
+                </span>
                 {isCurrentUser && (
                   <button
                     className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-                    onClick={toggleGoldVisibility}
-                    title={
-                      player.isGoldHidden ? "Mostrar Ouro" : "Ocultar Ouro"
-                    }
+                    onClick={handleGoldToggle}
+                    title={hideMyGold ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
                   >
-                    {player.isGoldHidden ? "👁️‍🗨️" : "👁️"}
+                    {hideMyGold ? "👁️‍🗨️" : "👁️"}
                   </button>
                 )}
               </span>
-              {player.isGoldHidden && !isCurrentUser ? (
+              {shouldShowGold ? (
                 <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                  ???
+                  {player.gold.toLocaleString("pt-BR")}
                 </p>
               ) : (
                 <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                  {player.gold.toLocaleString("pt-BR")}
+                  ???
                 </p>
               )}
             </div>
