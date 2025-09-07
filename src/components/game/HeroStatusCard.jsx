@@ -86,7 +86,10 @@ export function HeroStatusCard({
         if (player.inventory.length > 0 || player.gold > 0) {
           setShowItemSelection(true);
         } else {
-          updatePlayerStats(player.id, { isWounded: true });
+          // Se não há o que descartar, só marca como ferido se não for 'atordoado'
+          if (woundType !== 'atordoado') {
+            updatePlayerStats(player.id, { isWounded: true });
+          }
         }
         break;
 
@@ -104,20 +107,29 @@ export function HeroStatusCard({
     });
   };
 
+  // ===== INÍCIO DA CORREÇÃO =====
   const handleConfirmPenalty = () => {
     const finalInventory = player.inventory.filter(
       (_, index) => !itemsToDiscard.includes(index)
     );
     const finalGold = player.gold - goldToRemove;
 
-    updatePlayerStats(player.id, {
-      isWounded: true,
+    // Define o novo status do jogador
+    const newStats = {
       inventory: finalInventory,
       gold: Math.max(0, finalGold),
-    });
+    };
+
+    // Apenas define isWounded como true se o ferimento for grave ou leve
+    if (selectedWoundType === 'ferimento_grave' || selectedWoundType === 'ferimento_leve') {
+      newStats.isWounded = true;
+    }
+
+    updatePlayerStats(player.id, newStats);
 
     cancelItemSelection();
   };
+  // ===== FIM DA CORREÇÃO =====
 
   const cancelItemSelection = () => {
     setShowItemSelection(false);
@@ -126,7 +138,6 @@ export function HeroStatusCard({
     setGoldToRemove(0);
   };
 
-  // ===== INÍCIO DA ALTERAÇÃO =====
   const renderItemSelectionModal = () => {
     if (!selectedWoundType) return null;
 
@@ -230,7 +241,6 @@ export function HeroStatusCard({
       </Dialog>
     );
   };
-  // ===== FIM DA ALTERAÇÃO =====
 
   return (
     <>
@@ -280,16 +290,16 @@ export function HeroStatusCard({
         </CardHeader>
 
         <CardContent className="flex-grow flex flex-col justify-between p-3 sm:p-6 pt-0">
-          {classData?.gifUrl && (
-            <div className="flex justify-center my-2 sm:my-4">
+          <div className="flex-grow flex items-center justify-center my-2 sm:my-4">
+            {classData?.gifUrl && (
               <img
                 src={classData.gifUrl}
                 alt={`${player.character.name} pixel art`}
-                className="w-16 h-16 sm:w-24 sm:h-24 object-contain pixelated"
+                className="w-24 h-24 sm:w-32 sm:h-32 object-contain pixelated"
               />
-            </div>
-          )}
-
+            )}
+          </div>
+          
           <div className="space-y-2 sm:space-y-4">
             <div>
               <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
@@ -318,11 +328,11 @@ export function HeroStatusCard({
             </div>
           </div>
 
-          <div className="mt-3 sm:mt-4 pt-2 border-t border-stone-light/10">
+          <div className="mt-3 sm:mt-4 pt-3 border-t border-stone-light/10">
             <h5 className="text-xs sm:text-sm text-stone-light mb-2">
               Itens Especiais
             </h5>
-            <div className="flex flex-wrap gap-1 sm:gap-2">
+            <div className="flex flex-wrap gap-1 sm:gap-2 min-h-[28px]">
               {player.inventory && player.inventory.length > 0 ? (
                 player.inventory.map((item, index) => (
                   <button
