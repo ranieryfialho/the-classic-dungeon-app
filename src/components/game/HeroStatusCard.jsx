@@ -32,6 +32,7 @@ export function HeroStatusCard({
   const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
   const [hideMyGold, setHideMyGold] = useState(false);
+  const [showDeadStatus, setShowDeadStatus] = useState(false);
 
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
@@ -56,6 +57,8 @@ export function HeroStatusCard({
     if (isCurrentUser) {
       if (player.isWounded) {
         updatePlayerStats(player.id, { isWounded: false });
+      } else if (player.isStunned) {
+        updatePlayerStats(player.id, { isStunned: false });
       } else {
         setShowWoundModal(true);
       }
@@ -73,24 +76,24 @@ export function HeroStatusCard({
 
     switch (woundType) {
       case "morto":
+        // Mostra status MORTO por 5 segundos
+        setShowDeadStatus(true);
         updatePlayerStats(player.id, {
-          isWounded: true,
+          isWounded: false,
+          isStunned: false,
           inventory: [],
           gold: 0,
         });
+        
+        setTimeout(() => {
+          setShowDeadStatus(false);
+        }, 5000);
         break;
 
       case "ferimento_grave":
       case "ferimento_leve":
       case "atordoado":
-        if (player.inventory.length > 0 || player.gold > 0) {
-          setShowItemSelection(true);
-        } else {
-          // Se não há o que descartar, só marca como ferido se não for 'atordoado'
-          if (woundType !== 'atordoado') {
-            updatePlayerStats(player.id, { isWounded: true });
-          }
-        }
+        setShowItemSelection(true);
         break;
 
       default:
@@ -107,29 +110,28 @@ export function HeroStatusCard({
     });
   };
 
-  // ===== INÍCIO DA CORREÇÃO =====
   const handleConfirmPenalty = () => {
     const finalInventory = player.inventory.filter(
       (_, index) => !itemsToDiscard.includes(index)
     );
-    const finalGold = player.gold - goldToRemove;
+    const finalGold = Math.max(0, player.gold - goldToRemove);
 
-    // Define o novo status do jogador
     const newStats = {
       inventory: finalInventory,
-      gold: Math.max(0, finalGold),
+      gold: finalGold,
     };
 
-    // Apenas define isWounded como true se o ferimento for grave ou leve
     if (selectedWoundType === 'ferimento_grave' || selectedWoundType === 'ferimento_leve') {
       newStats.isWounded = true;
+      newStats.isStunned = false;
+    } else if (selectedWoundType === 'atordoado') {
+      newStats.isWounded = false;
+      newStats.isStunned = true;
     }
 
     updatePlayerStats(player.id, newStats);
-
     cancelItemSelection();
   };
-  // ===== FIM DA CORREÇÃO =====
 
   const cancelItemSelection = () => {
     setShowItemSelection(false);
@@ -137,6 +139,14 @@ export function HeroStatusCard({
     setItemsToDiscard([]);
     setGoldToRemove(0);
   };
+
+  const isPenaltySelected = itemsToDiscard.length > 0 || goldToRemove > 0;
+
+  const adjustGoldToRemove = (amount) => {
+    const currentAmount = goldToRemove;
+    const newAmount = Math.min(player.gold, Math.max(0, currentAmount + amount));
+    setGoldToRemove(newAmount);
+  }
 
   const renderItemSelectionModal = () => {
     if (!selectedWoundType) return null;
@@ -153,14 +163,6 @@ export function HeroStatusCard({
       ferimento_leve: "Abandone um de seus tesouros e/ou ouro.",
       atordoado: "Abandone um dos tesouros e/ou ouro.",
     };
-
-    const isPenaltySelected = itemsToDiscard.length > 0 || goldToRemove > 0;
-    
-    const adjustGoldToRemove = (amount) => {
-        const currentAmount = goldToRemove;
-        const newAmount = Math.min(player.gold, Math.max(0, currentAmount + amount));
-        setGoldToRemove(newAmount);
-    }
 
     return (
       <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
@@ -250,12 +252,16 @@ export function HeroStatusCard({
           "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card",
           isCurrentUser &&
             "cursor-pointer hover:bg-stone-charcoal transition-colors",
-          player.isWounded && "shadow-lg shadow-blood-red/20"
+          (player.isWounded || showDeadStatus) && "shadow-lg shadow-blood-red/20",
+          player.isStunned && "shadow-lg shadow-yellow-400/20"
         )}
         style={{ borderColor: player.color }}
       >
-        {player.isWounded && (
+        {(player.isWounded || showDeadStatus) && (
           <div className="absolute inset-0 bg-blood-red/10 pointer-events-none rounded-md" />
+        )}
+        {player.isStunned && (
+          <div className="absolute inset-0 bg-yellow-400/10 pointer-events-none rounded-md" />
         )}
 
         <CardHeader className="p-3 sm:p-6">
@@ -280,8 +286,12 @@ export function HeroStatusCard({
               )}
               title={isCurrentUser ? "Toque para alterar status" : ""}
             >
-              {player.isWounded ? (
+              {showDeadStatus ? (
+                <span className="text-red-600 bg-red-900/30">MORTO</span>
+              ) : player.isWounded ? (
                 <span className="text-blood-red bg-blood-red/20">FERIDO</span>
+              ) : player.isStunned ? (
+                <span className="text-yellow-400 bg-yellow-800/20">ATORDOADO</span>
               ) : (
                 <span className="text-green-400">NORMAL</span>
               )}

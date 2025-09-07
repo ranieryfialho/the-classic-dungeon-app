@@ -270,10 +270,10 @@ export function MultiplayerProvider({ children }) {
   const goToProfile = useCallback(() => setGameState((s) => ({ ...s, gamePhase: "profile" })), []);
   const startGameSelection = useCallback(() => updateRoomData({ gamePhase: "selection" }), [updateRoomData]);
 
-  const startGame = useCallback(() => runPlayerUpdateTransaction(players => players.map(p => ({
-    ...p,
-    gold: 0,
-    isWounded: false,
+  const startGame = useCallback(() => runPlayerUpdateTransaction(players => players.map(p => ({ 
+    ...p, 
+    gold: 0, 
+    isWounded: false, 
     inventory: []
   })))
     .then(() => updateRoomData({ gamePhase: "playing" })), [runPlayerUpdateTransaction, updateRoomData]);
