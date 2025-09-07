@@ -38,11 +38,6 @@ export function MultiplayerProvider({ children }) {
   const { currentUser: authUser } = useAuth();
 
   const unsubscribeRoomRef = useRef(null);
-  const isListeningRef = useRef(false);
-  const reconnectTimeoutRef = useRef(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-  const currentRoomIdRef = useRef(null);
   const hasTriedReconnectRef = useRef(false);
 
   const saveRoomId = useCallback((roomId) => {
@@ -61,56 +56,13 @@ export function MultiplayerProvider({ children }) {
     }
   }, []);
 
-  // A função joinRoom já está sendo usada aqui, e ela será refatorada abaixo
-  const attemptAutoReconnect = useCallback(async () => {
-    if (!authUser) return;
-
-    const savedRoomId = getSavedRoomId();
-    if (!savedRoomId) return;
-
-    console.log(
-      "[v1] Tentando reconectar automaticamente à sala:",
-      savedRoomId
-    );
-
-    try {
-      const roomRef = doc(db, "rooms", savedRoomId);
-      const roomSnap = await getDoc(roomRef);
-
-      if (roomSnap.exists()) {
-        const success = await joinRoom(savedRoomId);
-        if (success) {
-          console.log("[v1] Reconexão automática bem-sucedida");
-          hasTriedReconnectRef.current = true;
-        } else {
-          console.log("[v1] Falha na reconexão automática");
-          saveRoomId(null);
-        }
-      } else {
-        console.log("[v1] Sala salva não existe mais");
-        saveRoomId(null);
-      }
-    } catch (error) {
-      console.error("[v1] Erro na reconexão automática:", error);
-      saveRoomId(null);
-    }
-  }, [authUser, getSavedRoomId, saveRoomId]);
-
-  useEffect(() => {
-    if (!authUser || !gameState.room?.id) {
-      hasTriedReconnectRef.current = false;
-    }
-  }, [authUser, gameState.room?.id]);
-
-  useEffect(() => {
-    if (authUser && !gameState.room?.id && !hasTriedReconnectRef.current) {
-      attemptAutoReconnect();
-    }
-  }, [authUser, gameState.room?.id, attemptAutoReconnect]);
-
   const setupRealtimeListener = useCallback(
     (roomId) => {
-      if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
+      console.log(`[v2] Configurando listener para sala: ${roomId}`);
+      if (unsubscribeRoomRef.current) {
+        unsubscribeRoomRef.current();
+        unsubscribeRoomRef.current = null;
+      }
       if (!roomId) return;
 
       const roomRef = doc(db, "rooms", roomId);
@@ -118,6 +70,7 @@ export function MultiplayerProvider({ children }) {
         roomRef,
         (snap) => {
           if (!snap.exists()) {
+            console.log("[v2] Sala não existe mais, limpando estado.");
             saveRoomId(null);
             setGameState(initialGameState);
             return;
@@ -128,7 +81,9 @@ export function MultiplayerProvider({ children }) {
             if (p && p.id) acc[p.id] = p;
             return acc;
           }, {});
+
           setGameState((prev) => ({
+            ...prev,
             room: {
               id: roomId,
               inviteLink:
@@ -143,16 +98,106 @@ export function MultiplayerProvider({ children }) {
           }));
         },
         (error) => {
-          console.error("onSnapshot error:", error);
+          console.error("[v2] Erro no onSnapshot:", error);
           setGameState((prev) => ({
             ...prev,
-            connectionError: "Connection problem",
+            connectionError: "Problema de conexão com a sala.",
           }));
         }
       );
     },
     [saveRoomId]
   );
+
+  const joinRoom = useCallback(
+    async (roomId) => {
+      if (!authUser) return false;
+      const roomRef = doc(db, "rooms", roomId);
+
+      try {
+        await runTransaction(db, async (transaction) => {
+          const roomDoc = await transaction.get(roomRef);
+          if (!roomDoc.exists()) throw new Error("Sala não encontrada");
+
+          let playersList = roomDoc.data().players || [];
+          const playerExists = playersList.some((p) => p.id === authUser.uid);
+
+          if (!playerExists) {
+            if (playersList.length >= 6) throw new Error("Sala cheia");
+
+            let playerName = authUser.email;
+            const userDocRef = doc(db, "users", authUser.uid);
+            // Leitura fora da transação, pois é de outro documento e não muda com frequência
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists() && userDocSnap.data().displayName) {
+              playerName = userDocSnap.data().displayName;
+            }
+
+            const newPlayer = {
+              id: authUser.uid,
+              name: playerName,
+              color:
+                "#" +
+                Math.floor(Math.random() * 16777215)
+                  .toString(16)
+                  .padStart(6, "0"),
+              isHost: false,
+              ready: false,
+              character: null,
+              joinedAt: new Date().toISOString(),
+              gold: 0,
+              isWounded: false,
+              isGoldHidden: false, // Mantido para consistência do rollback
+              inventory: [],
+            };
+            playersList.push(newPlayer);
+            transaction.update(roomRef, { players: playersList });
+          }
+        });
+
+        saveRoomId(roomId);
+        setupRealtimeListener(roomId);
+        return true;
+      } catch (e) {
+        console.error("[v2] Erro ao entrar na sala:", e);
+        if (e.message === "Sala cheia") alert("A sala está cheia.");
+        if (e.message === "Sala não encontrada") alert("Sala não encontrada.");
+        return false;
+      }
+    },
+    [authUser, saveRoomId, setupRealtimeListener]
+  );
+
+  const attemptAutoReconnect = useCallback(async () => {
+    if (!authUser || hasTriedReconnectRef.current) return;
+
+    const savedRoomId = getSavedRoomId();
+    if (!savedRoomId) return;
+
+    hasTriedReconnectRef.current = true;
+    console.log(
+      "[v2] Tentando reconectar automaticamente à sala:",
+      savedRoomId
+    );
+
+    const roomRef = doc(db, "rooms", savedRoomId);
+    const roomSnap = await getDoc(roomRef);
+
+    if (roomSnap.exists()) {
+      await joinRoom(savedRoomId);
+    } else {
+      saveRoomId(null);
+    }
+  }, [authUser, getSavedRoomId, joinRoom, saveRoomId]);
+
+  useEffect(() => {
+    if (!gameState.room?.id) {
+      hasTriedReconnectRef.current = false;
+    }
+    if (authUser && !gameState.room?.id) {
+      attemptAutoReconnect();
+    }
+  }, [authUser, gameState.room?.id, attemptAutoReconnect]);
 
   useEffect(() => {
     const roomId = gameState.room?.id;
@@ -167,11 +212,8 @@ export function MultiplayerProvider({ children }) {
     };
   }, [authUser, gameState.room?.id, setupRealtimeListener]);
 
-  // ————————————————————————————————————————
-  // Utilitários
-  // ————————————————————————————————————————
   const updateRoomData = (updates) => {
-    const roomId = gameState.room?.id || currentRoomIdRef.current;
+    const roomId = gameState.room?.id;
     if (!roomId) return;
     return updateDoc(doc(db, "rooms", roomId), {
       ...updates,
@@ -179,7 +221,6 @@ export function MultiplayerProvider({ children }) {
     });
   };
 
-  // NOVA FUNÇÃO AUXILIAR PARA TRANSAÇÕES
   const runPlayerUpdateTransaction = async (updateLogic) => {
     const roomId = gameState.room?.id;
     if (!roomId) return;
@@ -187,9 +228,7 @@ export function MultiplayerProvider({ children }) {
     try {
       await runTransaction(db, async (transaction) => {
         const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) {
-          throw new Error("Sala não encontrada!");
-        }
+        if (!roomDoc.exists()) throw new Error("Sala não encontrada!");
         const currentPlayers = roomDoc.data().players || [];
         const newPlayers = updateLogic(currentPlayers);
         transaction.update(roomRef, {
@@ -205,15 +244,11 @@ export function MultiplayerProvider({ children }) {
   const removePlayer = async (playerIdToRemove) => {
     const me = authUser ? gameState.players[authUser.uid] : null;
     if (!me || !me.isHost || me.id === playerIdToRemove) return;
-
     await runPlayerUpdateTransaction((currentPlayers) =>
       currentPlayers.filter((p) => p.id !== playerIdToRemove)
     );
   };
 
-  // ————————————————————————————————————————
-  // Criação / Entrada em Sala
-  // ————————————————————————————————————————
   const createRoom = async () => {
     if (!authUser) return;
 
@@ -263,85 +298,21 @@ export function MultiplayerProvider({ children }) {
     try {
       await setDoc(doc(db, "rooms", roomId), roomData);
       saveRoomId(roomId);
-      // A sincronização será feita pelo listener
+      // **A CORREÇÃO PRINCIPAL**
+      // Ativa o listener para a nova sala, que vai cuidar de atualizar o estado.
+      setupRealtimeListener(roomId);
     } catch (e) {
-      console.error("[useMultiplayerGame] createRoom error:", e);
+      console.error("[v2] createRoom error:", e);
       alert("Erro ao criar sala. Tente novamente.");
     }
   };
 
-  const joinRoom = async (roomId) => {
-    if (!authUser) return false;
-    const roomRef = doc(db, "rooms", roomId);
-
-    try {
-      let playerWasAdded = false;
-      await runTransaction(db, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) {
-          throw new Error("Sala não encontrada");
-        }
-
-        let playersList = roomDoc.data().players || [];
-        const playerExists = playersList.some((p) => p.id === authUser.uid);
-
-        if (!playerExists) {
-          if (playersList.length >= 6) {
-            throw new Error("Sala cheia");
-          }
-
-          let playerName = authUser.email;
-          const userDocRef = doc(db, "users", authUser.uid);
-          const userDocSnap = await getDoc(userDocRef); // Não pode ser transaction.get pois é outra coleção
-          if (userDocSnap.exists() && userDocSnap.data().displayName) {
-            playerName = userDocSnap.data().displayName;
-          }
-
-          const newPlayer = {
-            id: authUser.uid,
-            name: playerName,
-            color:
-              "#" +
-              Math.floor(Math.random() * 16777215)
-                .toString(16)
-                .padStart(6, "0"),
-            isHost: false,
-            ready: false,
-            character: null,
-            joinedAt: new Date().toISOString(),
-            gold: 0,
-            isWounded: false,
-            isGoldHidden: false,
-            inventory: [],
-          };
-          playersList.push(newPlayer);
-          transaction.update(roomRef, { players: playersList });
-          playerWasAdded = true;
-        }
-      });
-
-      saveRoomId(roomId);
-      setupRealtimeListener(roomId); // Garante que o listener seja ativado
-      return true;
-    } catch (e) {
-      console.error("[useMultiplayerGame] joinRoom error:", e);
-      if (e.message === "Sala cheia") alert("A sala está cheia.");
-      if (e.message === "Sala não encontrada") alert("Sala não encontrada.");
-      return false;
-    }
-  };
-
-  // ————————————————————————————————————————
-  // Fases de jogo
-  // ————————————————————————————————————————
   const goToJoinRoom = () =>
     setGameState((s) => ({ ...s, gamePhase: "joining" }));
   const goToProfile = () =>
     setGameState((s) => ({ ...s, gamePhase: "profile" }));
 
-  const startGameSelection = async () => {
-    await updateRoomData({ gamePhase: "selection" });
-  };
+  const startGameSelection = () => updateRoomData({ gamePhase: "selection" });
 
   const startGame = async () => {
     await runPlayerUpdateTransaction((currentPlayers) =>
@@ -356,9 +327,6 @@ export function MultiplayerProvider({ children }) {
     await updateRoomData({ gamePhase: "playing" });
   };
 
-  // ————————————————————————————————————————
-  // Ações de jogador (sempre persistindo no Firestore)
-  // ————————————————————————————————————————
   const selectCharacterForPlayer = (playerId, characterData) => {
     runPlayerUpdateTransaction((players) =>
       players.map((p) =>
@@ -388,7 +356,6 @@ export function MultiplayerProvider({ children }) {
   const addItemToInventory = (playerId, itemId) => {
     const item = specialTreasures.find((i) => i.id === itemId);
     if (!item) return;
-
     runPlayerUpdateTransaction((players) =>
       players.map((p) => {
         if (p.id !== playerId) return p;
@@ -408,9 +375,6 @@ export function MultiplayerProvider({ children }) {
     );
   };
 
-  // ————————————————————————————————————————
-  // Proposta / votação de fim de jogo
-  // ————————————————————————————————————————
   const proposeEndGame = async () => {
     const me = authUser ? gameState.players[authUser.uid] : null;
     if (!me) return;
@@ -427,7 +391,6 @@ export function MultiplayerProvider({ children }) {
   const voteOnEndGame = async (vote) => {
     const roomId = gameState.room?.id;
     if (!roomId || !authUser) return;
-
     const path = `endGameProposal.votes.${authUser.uid}`;
     await updateDoc(doc(db, "rooms", roomId), {
       [path]: vote,
@@ -435,7 +398,7 @@ export function MultiplayerProvider({ children }) {
     });
   };
 
-  const processEndGameVotes = async () => {
+  const processEndGameVotes = useCallback(async () => {
     const { room, players } = gameState;
     const proposal = room?.endGameProposal;
     const me = authUser ? players[authUser.uid] : null;
@@ -445,9 +408,8 @@ export function MultiplayerProvider({ children }) {
       room.gamePhase === "ending" ||
       !me?.isHost ||
       proposal.status !== "pending"
-    ) {
+    )
       return;
-    }
 
     const playerIds = Object.keys(players);
     const voterIds = playerIds.filter((id) => id !== proposal.proposerId);
@@ -456,42 +418,23 @@ export function MultiplayerProvider({ children }) {
 
     if (hasEveryoneVoted) {
       const hasRejection = Object.values(proposal.votes).includes("reject");
-      const roomRef = doc(db, "rooms", room.id);
-
       if (hasRejection) {
-        console.log("Proposta rejeitada! Resetando votação.");
-        await updateDoc(roomRef, { endGameProposal: null });
+        await updateRoomData({ endGameProposal: null });
       } else {
-        console.log("Proposta aceita! Finalizando o jogo.");
-        await updateDoc(roomRef, { gamePhase: "ending" });
+        await updateRoomData({ gamePhase: "ending" });
         await endGameAndSaveHistory();
       }
     }
-  };
+  }, [gameState, authUser]);
 
   const endGameAndSaveHistory = async () => {
     const { players, room } = gameState;
     const playerList = Object.values(players);
     if (playerList.length === 0) return;
 
-    const proposer = room?.endGameProposal
-      ? players[room.endGameProposal.proposerId]
-      : null;
-    let winner = null;
-
-    if (proposer?.character?.className) {
-      const proposerClass = characterClasses.find(
-        (c) => c.name === proposer.character.className
-      );
-      if (proposerClass && (proposer.gold ?? 0) >= proposerClass.goldTarget) {
-        winner = proposer;
-      }
-    }
-    if (!winner) {
-      winner = playerList.reduce((a, b) =>
-        Number(a.gold || 0) > Number(b.gold || 0) ? a : b
-      );
-    }
+    const winner = playerList.reduce((a, b) =>
+      Number(a.gold || 0) > Number(b.gold || 0) ? a : b
+    );
 
     const playersSnapshot = playerList.map((p) => ({
       userId: p.id,
@@ -514,21 +457,17 @@ export function MultiplayerProvider({ children }) {
       });
       await deleteDoc(doc(db, "rooms", room.id));
     } catch (e) {
-      console.error("[useMultiplayerGame] endGameAndSaveHistory error:", e);
+      console.error("endGameAndSaveHistory error:", e);
     }
 
     saveRoomId(null);
     setGameState(initialGameState);
   };
 
-  // ————————————————————————————————————————
-  // Sair/voltar ao menu (limpa presença e sala se for o último)
-  // ————————————————————————————————————————
   const backToMenu = async () => {
     const roomId = gameState.room?.id;
     if (!authUser || !roomId) {
       saveRoomId(null);
-      hasTriedReconnectRef.current = false;
       setGameState(initialGameState);
       return;
     }
@@ -537,21 +476,23 @@ export function MultiplayerProvider({ children }) {
     try {
       await runTransaction(db, async (transaction) => {
         const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) return; // A sala já foi removida
+        if (!roomDoc.exists()) return;
 
-        const players = roomDoc.data().players || [];
+        let players = roomDoc.data().players || [];
         const updatedPlayers = players.filter((p) => p.id !== authUser.uid);
 
         if (updatedPlayers.length === 0) {
           transaction.delete(roomRef);
         } else {
-          // Se o host sair, elege um novo host (o jogador mais antigo)
           const isHostLeaving = players.find(
             (p) => p.id === authUser.uid
           )?.isHost;
-          if (isHostLeaving) {
+          if (isHostLeaving && updatedPlayers.length > 0) {
+            // Garante que o jogador mais antigo seja o novo host
             updatedPlayers.sort(
-              (a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0)
+              (a, b) =>
+                new Date(a.createdAt || a.joinedAt) -
+                new Date(b.createdAt || b.joinedAt)
             );
             updatedPlayers[0].isHost = true;
           }
@@ -562,49 +503,37 @@ export function MultiplayerProvider({ children }) {
         }
       });
     } catch (e) {
-      console.error("[useMultiplayerGame] backToMenu transaction error:", e);
+      console.error("backToMenu transaction error:", e);
     }
 
     saveRoomId(null);
-    hasTriedReconnectRef.current = false;
     setGameState(initialGameState);
   };
 
-  // ————————————————————————————————————————
-  // Context value
-  // ————————————————————————————————————————
   const value = useMemo(
     () => ({
       gameState,
-      setGameState,
       currentUser: authUser ? gameState.players[authUser.uid] : null,
-
       goToJoinRoom,
       goToProfile,
       backToMenu,
-
       createRoom,
       joinRoom,
       removePlayer,
-
       startGameSelection,
       startGame,
-
       selectCharacterForPlayer,
       unselectCharacter,
       updatePlayerStats,
       addItemToInventory,
       removeItemFromInventory,
-
       proposeEndGame,
       voteOnEndGame,
-      endGameAndSaveHistory,
       processEndGameVotes,
-
+      endGameAndSaveHistory,
       isConnected: !gameState.connectionError,
-      connectionError: gameState.connectionError,
     }),
-    [gameState, authUser]
+    [gameState, authUser, processEndGameVotes]
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
