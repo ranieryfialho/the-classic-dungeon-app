@@ -228,7 +228,6 @@ export function MultiplayerProvider({ children }) {
       gold: 0,
       isWounded: false,
       inventory: [],
-      isGoldHidden: true, // ALTERAÇÃO: Ouro oculto por padrão
     };
     await setDoc(doc(db, "rooms", roomId), {
       id: roomId,

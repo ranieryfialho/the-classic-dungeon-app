@@ -43,7 +43,6 @@ export function HeroStatusCard({
     player.isWounded &&
     !isCurrentUser;
 
-  // Lógica de visibilidade do ouro
   const shouldShowGold = isCurrentUser ? !hideMyGold : false;
   const shouldShowTarget = isCurrentUser;
 
@@ -127,6 +126,7 @@ export function HeroStatusCard({
     setGoldToRemove(0);
   };
 
+  // ===== INÍCIO DA ALTERAÇÃO =====
   const renderItemSelectionModal = () => {
     if (!selectedWoundType) return null;
 
@@ -144,6 +144,12 @@ export function HeroStatusCard({
     };
 
     const isPenaltySelected = itemsToDiscard.length > 0 || goldToRemove > 0;
+    
+    const adjustGoldToRemove = (amount) => {
+        const currentAmount = goldToRemove;
+        const newAmount = Math.min(player.gold, Math.max(0, currentAmount + amount));
+        setGoldToRemove(newAmount);
+    }
 
     return (
       <Dialog open={showItemSelection} onOpenChange={cancelItemSelection}>
@@ -157,51 +163,44 @@ export function HeroStatusCard({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto">
-            <div className="bg-gradient-to-r from-yellow-900/20 to-yellow-800/20 p-2 sm:p-4 rounded-lg border-2 border-yellow-600/30">
-              <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3">
-                💰 Ouro a remover (atual: {player.gold.toLocaleString("pt-BR")})
-              </label>
-              <Input
-                type="number"
-                min="0"
-                max={player.gold}
-                value={goldToRemove}
-                onChange={(e) =>
-                  setGoldToRemove(
-                    Math.min(
-                      player.gold,
-                      Math.max(0, parseInt(e.target.value) || 0)
-                    )
-                  )
-                }
-                className="bg-stone-800/70 border-2 border-stone-600/50 text-white"
-              />
+          <div className="space-y-3 sm:space-y-4 flex-1 overflow-y-auto pr-2">
+            <div className="bg-dungeon-black/50 p-2 sm:p-4 rounded-lg border-2 border-stone-600/30">
+                <label className="text-xs sm:text-sm font-semibold text-yellow-200 block mb-2 sm:mb-3">
+                    💰 Ouro a remover (atual: {player.gold.toLocaleString("pt-BR")})
+                </label>
+                <div className="flex items-center justify-center p-2 bg-stone-900 rounded-lg text-center mb-3">
+                    <p className="text-2xl font-bold text-red-400">
+                        -{goldToRemove.toLocaleString('pt-BR')}
+                    </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                    <Button onClick={() => adjustGoldToRemove(100)} variant="outline" className="bg-red-900/40 border-red-500/50 hover:bg-red-800/60 text-red-300 font-bold">+100</Button>
+                    <Button onClick={() => adjustGoldToRemove(500)} variant="outline" className="bg-red-900/40 border-red-500/50 hover:bg-red-800/60 text-red-300 font-bold">+500</Button>
+                    <Button onClick={() => adjustGoldToRemove(1000)} variant="outline" className="bg-red-900/40 border-red-500/50 hover:bg-red-800/60 text-red-300 font-bold">+1000</Button>
+                </div>
             </div>
 
             {player.inventory.length > 0 && (
-              <div>
+              <div className="bg-dungeon-black/50 p-2 sm:p-4 rounded-lg border-2 border-stone-600/30">
                 <h4 className="text-xs sm:text-sm font-semibold text-stone-300 mb-2 sm:mb-3">
                   🎒 Itens a abandonar ({itemsToDiscard.length} selecionado(s)):
                 </h4>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 scroll-container">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-2 scroll-container">
                   {player.inventory.map((item, index) => (
                     <button
                       key={index}
                       onClick={() => handleItemToggleForDiscard(index)}
                       className={cn(
-                        "w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 border-2 border-stone-600/40 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center",
+                        "w-full group bg-gradient-to-r from-stone-700/30 to-stone-600/30 border-2 border-stone-600/40 rounded-lg p-2 sm:p-3 transition-all duration-200 text-left min-h-[44px] flex items-center gap-2",
                         itemsToDiscard.includes(index)
                           ? "border-red-500/80 ring-2 ring-red-500/50 bg-red-900/30"
                           : "hover:border-stone-400/50"
                       )}
                     >
-                      <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
-                        <span className="text-lg sm:text-2xl">{item.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-xs sm:text-sm text-white truncate">
-                            {item.name}
-                          </div>
+                      <span className="text-lg sm:text-2xl">{item.icon}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-xs sm:text-sm text-white truncate">
+                          {item.name}
                         </div>
                       </div>
                     </button>
@@ -231,6 +230,7 @@ export function HeroStatusCard({
       </Dialog>
     );
   };
+  // ===== FIM DA ALTERAÇÃO =====
 
   return (
     <>
