@@ -6,6 +6,7 @@ import { ManageHeroModal } from "@/components/game/ManageHeroModal";
 import { ItemDetailsModal } from "@/components/game/ItemDetailsModal";
 import { EndGameModal } from "@/components/game/EndGameModal";
 import { WoundRulesModal } from "@/components/game/WoundRulesModal";
+import { CharacterInfoModal } from "@/components/game/CharacterInfoModal";
 import { characterClasses } from "@/config/characterClasses";
 
 export function GameDashboard() {
@@ -16,7 +17,8 @@ export function GameDashboard() {
   const editingPlayer = editingPlayerId ? gameState.players[editingPlayerId] : null;
   const [showingItem, setShowingItem] = useState(null);
   const [showWoundRules, setShowWoundRules] = useState(false);
-  
+  const [showingInfoForPlayer, setShowingInfoForPlayer] = useState(null);
+
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
       setEditingPlayerId(player.id);
@@ -32,7 +34,6 @@ export function GameDashboard() {
     const classData = characterClasses.find(c => c.name === currentUser.character.className);
     if (!classData) return;
     
-    // ALTERAÇÃO: Verificar se o jogador atingiu sua meta para permitir propor fim do jogo
     if (currentUser.gold >= classData.goldTarget) {
       proposeEndGame();
     } else {
@@ -51,7 +52,7 @@ export function GameDashboard() {
               <h1 className="text-2xl sm:text-4xl font-bold text-ethereal-blue">A Aventura Começou!</h1>
               <div className="flex gap-3">
                 <Button onClick={() => setShowWoundRules(true)} className="bg-blood-red hover:bg-red-700 text-white font-bold text-lg px-6 py-3">⚔️ Regras de Combate</Button>
-                <Button onClick={handleProposeEndGame} disabled={hasPendingProposal} className="bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-lg px-6 py-3 disabled:opacity-50">{hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}</Button>
+                <Button onClick={handleProposeEndGame} disabled={hasPendingProposal} className="bg-treasure-gold hover:bg-yellow-500 text-dungeon-black font-bold text-lg px-6 py-3 disabled:opacity-50">{hasPendingProposal ? 'Votação em Andamento...' : 'Finalizar Jogo'}</Button>
               </div>
             </div>
           </div>
@@ -71,6 +72,7 @@ export function GameDashboard() {
                   isCurrentUser={player.id === currentUser.id} 
                   onClick={() => handleCardClick(player)} 
                   onItemClick={handleItemClick}
+                  onInfoClick={() => setShowingInfoForPlayer(player)}
                 />
               ))}
             </div>
@@ -79,7 +81,7 @@ export function GameDashboard() {
         <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
           <div className="flex gap-2 max-w-sm mx-auto">
             <Button onClick={() => setShowWoundRules(true)} className="flex-1 bg-blood-red hover:bg-red-700 text-white font-bold text-sm min-h-[48px]">⚔️ Regras</Button>
-            <Button onClick={handleProposeEndGame} disabled={hasPendingProposal} className="flex-1 bg-treasure-gold hover:bg-divine-amber text-dungeon-black font-bold text-sm min-h-[48px] disabled:opacity-50">{hasPendingProposal ? 'Votando...' : 'Finalizar'}</Button>
+            <Button onClick={handleProposeEndGame} disabled={hasPendingProposal} className="flex-1 bg-treasure-gold hover:bg-yellow-500 text-dungeon-black font-bold text-sm min-h-[48px] disabled:opacity-50">{hasPendingProposal ? 'Votando...' : 'Finalizar'}</Button>
           </div>
         </div>
       </div>
@@ -87,6 +89,12 @@ export function GameDashboard() {
       <ItemDetailsModal item={showingItem} isOpen={!!showingItem} onClose={() => setShowingItem(null)}/>
       <EndGameModal />
       <WoundRulesModal isOpen={showWoundRules} onClose={() => setShowWoundRules(false)}/>
+      
+      <CharacterInfoModal 
+        player={showingInfoForPlayer} 
+        isOpen={!!showingInfoForPlayer} 
+        onClose={() => setShowingInfoForPlayer(null)}
+      />
     </>
   );
 }

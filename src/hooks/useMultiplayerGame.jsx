@@ -55,8 +55,6 @@ export function MultiplayerProvider({ children }) {
     }
   }, []);
 
-  // ===== ORDEM CORRIGIDA: Funções declaradas antes de serem usadas =====
-
   const setupRealtimeListener = useCallback(
     (roomId) => {
       if (unsubscribeRoomRef.current) {
@@ -132,9 +130,10 @@ export function MultiplayerProvider({ children }) {
             gold: 0,
             isWounded: false,
             inventory: [],
-            isGoldHidden: true, // ALTERAÇÃO: Ouro oculto por padrão
+            isGoldHidden: true,
             woundType: null, // grave, leve
             skipTurn: false,
+            isDead: false, // <-- ADICIONADO AQUI
           });
           transaction.update(roomRef, { players: playersList });
         }
@@ -230,8 +229,9 @@ export function MultiplayerProvider({ children }) {
       gold: 0,
       isWounded: false,
       inventory: [],
-      woundType: null, // grave, leve
+      woundType: null,
       skipTurn: false,
+      isDead: false,
     };
     await setDoc(doc(db, "rooms", roomId), {
       id: roomId,

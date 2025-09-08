@@ -14,7 +14,7 @@ export function CharacterSelection() {
   const [selectedClass, setSelectedClass] = useState(null);
 
   if (!currentUser) {
-    return null; 
+    return null;
   }
 
   const handleSelectHero = (heroName, className) => {
@@ -89,17 +89,63 @@ export function CharacterSelection() {
           </div>
         </div>
       </div>
+
       <Dialog open={!!selectedClass} onOpenChange={() => setSelectedClass(null)}>
-        <DialogContent className="bg-stone-charcoal border-stone-light/30 text-white max-w-[90vw] sm:max-w-md mx-4">
-          <DialogHeader>
-            <DialogTitle className="text-xl sm:text-2xl text-ethereal-blue">Escolha seu {selectedClass?.name}</DialogTitle>
-            <DialogDescription className="text-stone-light text-sm">Selecione um dos heróis disponíveis para esta classe.</DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col space-y-2 sm:space-y-3 pt-4 max-h-[60vh] overflow-y-auto">
-            {selectedClass?.heroes.map((hero) => (<Button key={hero} variant="outline" size="lg" className="bg-ancient-stone hover:bg-weathered-gray border-stone-light/30 text-base sm:text-lg font-semibold min-h-[48px] w-full" onClick={() => handleSelectHero(hero, selectedClass.name)}>{hero}</Button>))}
+        <DialogContent className="bg-stone-charcoal border-stone-light/30 text-white max-w-2xl w-[95vw] p-0">
+          <div className="flex flex-col sm:flex-row">
+            {/* Coluna da Esquerda: Sprite e Informações */}
+            <div className="w-full sm:w-1/3 bg-dungeon-black/50 p-6 flex flex-col items-center justify-center border-r border-stone-light/20">
+              {selectedClass?.gifUrl && (
+                <img
+                  src={selectedClass.gifUrl}
+                  alt={selectedClass.name}
+                  className="w-32 h-32 object-contain pixelated mb-4"
+                />
+              )}
+              <h2 className={`text-3xl font-bold ${selectedClass?.color}`}>{selectedClass?.name}</h2>
+              <div className="flex gap-6 mt-4 text-stone-light">
+                <div className="text-center">
+                  <p className="text-xs">OURO</p>
+                  <p className="font-bold text-lg text-treasure-gold">{selectedClass?.goldTarget.toLocaleString('pt-BR')}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-xs">MOV.</p>
+                  <p className="font-bold text-lg text-white">{selectedClass?.movement}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Coluna da Direita: Confirmação e Vantagens */}
+            <div className="w-full sm:w-2/3 p-6 flex flex-col">
+              <DialogHeader className="mb-4">
+                <DialogTitle className="text-2xl text-ethereal-blue">Confirmar Classe</DialogTitle>
+                <DialogDescription className="text-stone-light">
+                  Você será {selectedClass?.heroes[0]}, o {selectedClass?.name}.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex-grow space-y-3 overflow-y-auto pr-2 mb-6">
+                <h3 className="font-bold text-frost-blue border-b border-stone-light/20 pb-2">Vantagens da Classe</h3>
+                {selectedClass?.advantages.map((advantage, index) => (
+                  <div key={index}>
+                    <p className="font-semibold text-white">{advantage.title}</p>
+                    <p className="text-sm text-stone-light">{advantage.description}</p>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                size="lg"
+                className="w-full bg-crystal-blue hover:bg-frost-blue text-white font-bold text-lg h-14 mt-auto"
+                onClick={() => handleSelectHero(selectedClass.heroes[0], selectedClass.name)}
+              >
+                Confirmar {selectedClass?.name}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
+
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
         <div className="flex flex-col gap-2 max-w-sm mx-auto">
           {isHost && (<Button onClick={startGame} disabled={!allPlayersReady} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm min-h-[48px] disabled:opacity-50">{allPlayersReady ? 'Iniciar Jogo' : 'Aguardando jogadores...'}</Button>)}

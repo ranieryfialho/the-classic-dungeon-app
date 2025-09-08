@@ -8,7 +8,6 @@ import {
 import { characterClasses } from "@/config/characterClasses";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import {
   Dialog,
@@ -18,12 +17,14 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ScrollText } from "lucide-react";
 
 export function HeroStatusCard({
   player,
   onClick,
   isCurrentUser,
   onItemClick,
+  onInfoClick,
 }) {
   const { currentUser, updatePlayerStats } = useMultiplayerGame();
   const [showWoundModal, setShowWoundModal] = useState(false);
@@ -32,7 +33,6 @@ export function HeroStatusCard({
   const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
   const [hideMyGold, setHideMyGold] = useState(false);
-  const [showDeadStatus, setShowDeadStatus] = useState(false);
 
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
@@ -44,7 +44,6 @@ export function HeroStatusCard({
     player.isWounded &&
     !isCurrentUser;
 
-  const shouldShowGold = isCurrentUser ? !hideMyGold : false;
   const shouldShowTarget = isCurrentUser;
 
   const handleHeal = (e) => {
@@ -55,6 +54,9 @@ export function HeroStatusCard({
   const handleWoundClick = (e) => {
     e.stopPropagation();
     if (isCurrentUser) {
+      if (player.isDead) {
+        return;
+      }
       if (player.isWounded) {
         updatePlayerStats(player.id, { isWounded: false, woundType: null, skipTurn: false });
       } else if (player.isStunned) {
@@ -69,16 +71,15 @@ export function HeroStatusCard({
     e.stopPropagation();
     setHideMyGold(prev => !prev);
   };
-
+  
   const handleWoundTypeSelect = (woundType) => {
     setSelectedWoundType(woundType);
     setShowWoundModal(false);
 
     switch (woundType) {
       case "morto":
-        // Mostra status MORTO por 5 segundos
-        setShowDeadStatus(true);
         updatePlayerStats(player.id, {
+          isDead: true,
           isWounded: false,
           isStunned: false,
           inventory: [],
@@ -88,7 +89,7 @@ export function HeroStatusCard({
         });
         
         setTimeout(() => {
-          setShowDeadStatus(false);
+          updatePlayerStats(player.id, { isDead: false });
         }, 5000);
         break;
 
@@ -254,7 +255,7 @@ export function HeroStatusCard({
       </Dialog>
     );
   };
-
+  
   return (
     <>
       <Card
@@ -263,12 +264,12 @@ export function HeroStatusCard({
           "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card",
           isCurrentUser &&
             "cursor-pointer hover:bg-stone-charcoal transition-colors",
-          (player.isWounded || showDeadStatus) && "shadow-lg shadow-blood-red/20",
+          (player.isWounded || player.isDead) && "shadow-lg shadow-blood-red/20",
           player.isStunned && "shadow-lg shadow-yellow-400/20"
         )}
         style={{ borderColor: player.color }}
       >
-        {(player.isWounded || showDeadStatus) && (
+        {(player.isWounded || player.isDead) && (
           <div className="absolute inset-0 bg-blood-red/10 pointer-events-none rounded-md" />
         )}
         {player.isStunned && (
@@ -290,24 +291,14 @@ export function HeroStatusCard({
             </div>
             <div
               onClick={handleWoundClick}
-              className={cn(
-                "font-bold text-xs sm:text-sm px-2 py-1 rounded whitespace-nowrap flex-shrink-0",
-                isCurrentUser &&
-                  "cursor-pointer hover:bg-blood-red/30 transition-colors"
-              )}
+              className={cn( "font-bold text-xs sm:text-sm px-2 py-1 rounded whitespace-nowrap flex-shrink-0", isCurrentUser && "cursor-pointer hover:bg-blood-red/30 transition-colors" )}
               title={isCurrentUser ? "Toque para alterar status" : ""}
             >
-              {showDeadStatus ? (
-                <span className="text-red-600 bg-red-900/30">MORTO</span>
-              ) : player.woundType === 'grave' ? (
-                <span className="text-red-400 bg-red-900/30">FERIMENTO GRAVE</span>
-              ) : player.woundType === 'leve' ? (
-                <span className="text-orange-400 bg-orange-900/30">FERIMENTO LEVE</span>
-              ) : player.isStunned ? (
-                <span className="text-yellow-400 bg-yellow-800/20">ATORDOADO</span>
-              ) : (
-                <span className="text-green-400">NORMAL</span>
-              )}
+              {player.isDead ? ( <span className="text-red-600 bg-red-900/30 p-1">MORTO</span> ) : 
+               player.woundType === 'grave' ? ( <span className="text-red-400 bg-red-900/30 p-1">FERIMENTO GRAVE</span> ) : 
+               player.woundType === 'leve' ? ( <span className="text-orange-400 bg-orange-900/30 p-1">FERIMENTO LEVE</span> ) : 
+               player.isStunned ? ( <span className="text-yellow-400 bg-yellow-800/20 p-1">ATORDOADO</span> ) : 
+               ( <span className="text-green-400">NORMAL</span> )}
             </div>
           </div>
         </CardHeader>
@@ -326,9 +317,7 @@ export function HeroStatusCard({
           <div className="space-y-2 sm:space-y-4">
             <div>
               <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span>
-                  Ouro {shouldShowTarget && `(Meta: ${goldTarget.toLocaleString("pt-BR")})`}
-                </span>
+                <span> Ouro {shouldShowTarget && `(Meta: ${goldTarget.toLocaleString("pt-BR")})`} </span>
                 {isCurrentUser && (
                   <button
                     className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
@@ -339,15 +328,9 @@ export function HeroStatusCard({
                   </button>
                 )}
               </span>
-              {shouldShowGold ? (
-                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                  {player.gold.toLocaleString("pt-BR")}
-                </p>
-              ) : (
-                <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                  ???
-                </p>
-              )}
+              <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+                  {isCurrentUser && hideMyGold ? "???" : player.gold.toLocaleString("pt-BR")}
+              </p>
             </div>
           </div>
           {player.woundType === 'leve' && (
@@ -367,10 +350,7 @@ export function HeroStatusCard({
                     key={index}
                     title={item.description}
                     className="text-lg sm:text-2xl cursor-pointer hover:scale-110 transition-transform p-1"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onItemClick(item);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onItemClick(item); }}
                   >
                     {item.icon}
                   </button>
@@ -383,6 +363,19 @@ export function HeroStatusCard({
             </div>
           </div>
 
+          {isCurrentUser && (
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onInfoClick();
+              }}
+              className="w-full mt-3 sm:mt-4 bg-void-purple/80 hover:bg-void-purple text-white font-bold text-xs sm:text-sm"
+            >
+              <ScrollText className="mr-2 h-4 w-4" />
+              Ver Vantagens
+            </Button>
+          )}
+          
           {canHeal && (
             <Button
               onClick={handleHeal}
@@ -473,7 +466,7 @@ export function HeroStatusCard({
           </div>
         </DialogContent>
       </Dialog>
-
+      
       {renderItemSelectionModal()}
     </>
   );
