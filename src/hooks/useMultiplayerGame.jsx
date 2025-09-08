@@ -293,6 +293,31 @@ export function MultiplayerProvider({ children }) {
     [runPlayerUpdateTransaction]
   );
 
+  const killPlayer = useCallback((playerId) => {
+     updatePlayerStats(playerId, {
+        isDead: true,
+        isWounded: false,
+        isStunned: false,
+        inventory: [],
+        gold: 0,
+        woundType: null,
+        skipTurn: false,
+      });
+      setTimeout(() => {
+        updatePlayerStats(playerId, { isDead: false });
+      }, 5000);
+  }, [updatePlayerStats]);
+
+  const warriorSurvives = useCallback((playerId) => {
+    updatePlayerStats(playerId, {
+        isWounded: true,
+        woundType: 'leve',
+        skipTurn: true,
+        isDead: false,
+        isStunned: false,
+    });
+  }, [updatePlayerStats]);
+
   const setPlayerSpells = useCallback(
     (playerId, spells) => {
       updatePlayerStats(playerId, { spells });
@@ -489,6 +514,8 @@ export function MultiplayerProvider({ children }) {
       stealItemFromPlayer,
       stealGoldFromPlayer,
       addGoldBonus,
+      warriorSurvives,
+      killPlayer,
     }),
     [
       gameState,
@@ -514,6 +541,8 @@ export function MultiplayerProvider({ children }) {
       stealItemFromPlayer,
       stealGoldFromPlayer,
       addGoldBonus,
+      warriorSurvives,
+      killPlayer,
     ]
   );
 

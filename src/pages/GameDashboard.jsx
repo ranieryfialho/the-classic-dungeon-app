@@ -11,6 +11,7 @@ import { SpellbookModal } from "@/components/game/SpellbookModal";
 import { characterClasses } from "@/config/characterClasses";
 import { AmbushModal } from "@/components/game/AmbushModal";
 import { DwarfAbilityModal } from "@/components/game/DwarfAbilityModal";
+import { WarriorAbilityModal } from "@/components/game/WarriorAbilityModal"; // Nova importação
 
 export function GameDashboard() {
   const { 
@@ -20,7 +21,9 @@ export function GameDashboard() {
     setPlayerSpells,
     stealGoldFromPlayer,
     stealItemFromPlayer,
-    addGoldBonus 
+    addGoldBonus,
+    warriorSurvives,
+    killPlayer
   } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
 
@@ -32,6 +35,7 @@ export function GameDashboard() {
   const [editingSpellsForPlayer, setEditingSpellsForPlayer] = useState(null);
   const [ambushTarget, setAmbushTarget] = useState(null);
   const [isDwarfModalOpen, setIsDwarfModalOpen] = useState(false);
+  const [warriorLastChance, setWarriorLastChance] = useState(null); // Novo estado
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -49,6 +53,10 @@ export function GameDashboard() {
   
   const handleDwarfAbilityConfirm = () => {
     addGoldBonus(currentUser.id, 1000);
+  };
+  
+  const handleWarriorDeathAttempt = (player) => {
+    setWarriorLastChance(player);
   };
 
   const handleProposeEndGame = () => {
@@ -98,6 +106,7 @@ export function GameDashboard() {
                   onManageSpells={() => setEditingSpellsForPlayer(player)}
                   onAmbush={handleAmbushClick}
                   onOpenDwarfModal={() => setIsDwarfModalOpen(true)}
+                  onWarriorDeathAttempt={() => handleWarriorDeathAttempt(player)}
                 />
               ))}
             </div>
@@ -141,6 +150,13 @@ export function GameDashboard() {
         isOpen={isDwarfModalOpen}
         onClose={() => setIsDwarfModalOpen(false)}
         onConfirm={handleDwarfAbilityConfirm}
+      />
+
+      <WarriorAbilityModal
+        isOpen={!!warriorLastChance}
+        onClose={() => setWarriorLastChance(null)}
+        onSuccess={() => warriorSurvives(warriorLastChance.id)}
+        onFailure={() => killPlayer(warriorLastChance.id)}
       />
     </>
   );

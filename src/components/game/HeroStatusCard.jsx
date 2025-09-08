@@ -64,29 +64,32 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
 };
 
 const GoldDisplay = ({ player, isCurrentUser, onToggleGoldVisibility }) => {
-    const shouldShowGold = isCurrentUser;
+  const shouldShowGold = isCurrentUser;
 
-    return (
-        <div>
-            <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span>Ouro</span>
-                {isCurrentUser && (
-                    <button
-                        className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-                        onClick={onToggleGoldVisibility}
-                        title={player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
-                    >
-                        {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
-                    </button>
-                )}
-            </span>
-            <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                {shouldShowGold && !player.isGoldHidden ? player.gold.toLocaleString("pt-BR") : "???"}
-            </p>
-        </div>
-    );
+  return (
+    <div>
+      <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
+        <span>Ouro</span>
+        {isCurrentUser && (
+          <button
+            className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
+            onClick={onToggleGoldVisibility}
+            title={
+              player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"
+            }
+          >
+            {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
+          </button>
+        )}
+      </span>
+      <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+        {shouldShowGold && !player.isGoldHidden
+          ? player.gold.toLocaleString("pt-BR")
+          : "???"}
+      </p>
+    </div>
+  );
 };
-
 
 const SpellDisplay = ({ player, isCurrentUser }) => {
   const { toggleSpellState } = useMultiplayerGame();
@@ -183,10 +186,10 @@ const ActionButtons = ({
     !isCurrentUser &&
     isWoundedState &&
     currentUser?.character?.className === "Paladino";
-  
-  const isThief = currentUser?.character?.className === 'Ladrão';
+
+  const isThief = currentUser?.character?.className === "Ladrão";
   const canAmbush = isThief && !isCurrentUser;
-  const isDwarf = player.character.className === 'Anão' && isCurrentUser;
+  const isDwarf = player.character.className === "Anão" && isCurrentUser;
 
   return (
     <>
@@ -203,14 +206,14 @@ const ActionButtons = ({
       )}
 
       {isDwarf && (
-         <Button
-            onClick={(e) => {
-                e.stopPropagation();
-                onOpenDwarfModal();
-            }}
-            className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
-            >
-            <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDwarfModal();
+          }}
+          className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+        >
+          <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
         </Button>
       )}
 
@@ -276,9 +279,10 @@ export function HeroStatusCard({
   onManageSpells,
   onAmbush,
   onOpenDwarfModal,
+  onWarriorDeathAttempt,
 }) {
-  const { currentUser, updatePlayerStats } = useMultiplayerGame();
-  
+  const { currentUser, updatePlayerStats, killPlayer } = useMultiplayerGame();
+
   const [showWoundModal, setShowWoundModal] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [selectedWoundType, setSelectedWoundType] = useState(null);
@@ -345,18 +349,11 @@ export function HeroStatusCard({
   const handleWoundTypeSelect = (woundType) => {
     setShowWoundModal(false);
     if (woundType === "morto") {
-      updatePlayerStats(player.id, {
-        isDead: true,
-        isWounded: false,
-        isStunned: false,
-        inventory: [],
-        gold: 0,
-        woundType: null,
-        skipTurn: false,
-      });
-      setTimeout(() => {
-        updatePlayerStats(player.id, { isDead: false });
-      }, 5000);
+      if (player.character.className === "Guerreiro") {
+        onWarriorDeathAttempt();
+      } else {
+        killPlayer(player.id);
+      }
     } else {
       setSelectedWoundType(woundType);
       setShowItemSelection(true);
