@@ -12,6 +12,7 @@ import { characterClasses } from "@/config/characterClasses";
 import { AmbushModal } from "@/components/game/AmbushModal";
 import { DwarfAbilityModal } from "@/components/game/DwarfAbilityModal";
 import { WarriorAbilityModal } from "@/components/game/WarriorAbilityModal";
+import { CageTrapModal } from "@/components/game/CageTrapModal"; // Nova importação
 
 export function GameDashboard() {
   const { 
@@ -24,7 +25,8 @@ export function GameDashboard() {
     addGoldBonus,
     warriorSurvives,
     killPlayer,
-    passTurn
+    passTurn,
+    setPlayerSkipTurns // Nova importação
   } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
   const { room, players } = gameState;
@@ -38,6 +40,7 @@ export function GameDashboard() {
   const [ambushTarget, setAmbushTarget] = useState(null);
   const [isDwarfModalOpen, setIsDwarfModalOpen] = useState(false);
   const [warriorLastChance, setWarriorLastChance] = useState(null);
+  const [isCageModalOpen, setIsCageModalOpen] = useState(false); // Novo estado
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -80,6 +83,7 @@ export function GameDashboard() {
   return (
     <>
       <div className="h-full w-full bg-transparent safe-area-top safe-area-left safe-area-right">
+        {/* ... (código do header, que já está correto) ... */}
         <header className="hidden sm:block container-mobile-safe py-4 sm:py-8 mb-4 sm:mb-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center">
@@ -92,7 +96,7 @@ export function GameDashboard() {
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {isMyTurn && (
+                {isMyTurn && !currentUser.skipTurn && (
                   <Button onClick={passTurn} className="bg-green-600 hover:bg-green-700 text-white font-bold text-lg px-6 h-12">
                     Finalizar Turno
                   </Button>
@@ -129,6 +133,7 @@ export function GameDashboard() {
                   onAmbush={handleAmbushClick}
                   onOpenDwarfModal={() => setIsDwarfModalOpen(true)}
                   onWarriorDeathAttempt={() => handleWarriorDeathAttempt(player)}
+                  onOpenCageTrap={() => setIsCageModalOpen(true)}
                 />
               ))}
             </div>
@@ -136,7 +141,7 @@ export function GameDashboard() {
         </main>
         <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
           <div className="flex flex-col gap-2 max-w-sm mx-auto">
-             {isMyTurn && (
+             {isMyTurn && !currentUser.skipTurn && (
                   <Button onClick={passTurn} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm min-h-[48px]">
                     Finalizar Turno
                   </Button>
@@ -186,6 +191,13 @@ export function GameDashboard() {
         onClose={() => setWarriorLastChance(null)}
         onSuccess={() => warriorSurvives(warriorLastChance.id)}
         onFailure={() => killPlayer(warriorLastChance.id)}
+      />
+
+      <CageTrapModal
+        isOpen={isCageModalOpen}
+        onClose={() => setIsCageModalOpen(false)}
+        player={currentUser}
+        onConfirm={setPlayerSkipTurns}
       />
     </>
   );

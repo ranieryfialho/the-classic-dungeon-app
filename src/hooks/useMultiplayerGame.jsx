@@ -160,7 +160,7 @@ export function MultiplayerProvider({ children }) {
               inventory: [],
               isGoldHidden: true,
               woundType: null,
-              skipTurn: false,
+              turnsToSkip: 0,
               isDead: false,
               spells: [],
             });
@@ -206,7 +206,7 @@ export function MultiplayerProvider({ children }) {
       isWounded: false,
       inventory: [],
       woundType: null,
-      skipTurn: false,
+      turnsToSkip: 0,
       isDead: false,
       spells: [],
     };
@@ -243,23 +243,6 @@ export function MultiplayerProvider({ children }) {
     }
   }, [authUser, gameState.room?.id, attemptAutoReconnect]);
 
-  useEffect(() => {
-    const { room, players } = gameState;
-    const me = authUser ? players[authUser.uid] : null;
-
-    if (!me || !room || !room.currentTurnPlayerId) return;
-
-    if (me.isHost && me.id === room.currentTurnPlayerId) {
-      const currentPlayer = players[room.currentTurnPlayerId];
-      if (currentPlayer && currentPlayer.skipTurn) {
-        setTimeout(() => {
-          passTurn();
-        }, 1500); 
-      }
-    }
-  }, [gameState.room?.currentTurnPlayerId, authUser, gameState.players]);
-
-
   const updateRoomData = useCallback(
     (updates) => {
       const roomId = gameState.room?.id;
@@ -271,6 +254,73 @@ export function MultiplayerProvider({ children }) {
     },
     [gameState.room?.id]
   );
+
+  const updatePlayerStats = useCallback(
+    (playerId, newStats) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => (p.id === playerId ? { ...p, ...newStats } : p))
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
+
+  const passTurn = useCallback(async () => {
+    const { room, players } = gameState;
+    if (
+      !room ||
+      !room.currentTurnPlayerId ||
+      !room.turnOrder ||
+      room.turnOrder.length === 0
+    )
+      return;
+
+    const currentTurnOrder = room.turnOrder;
+    const currentPlayerId = room.currentTurnPlayerId;
+    const currentPlayerIndex = currentTurnOrder.indexOf(currentPlayerId);
+
+    const updatedPlayers = { ...players };
+    const dbUpdates = {};
+
+    let nextPlayerIndex = (currentPlayerIndex + 1) % currentTurnOrder.length;
+
+    for (let i = 0; i < currentTurnOrder.length; i++) {
+      const candidateId = currentTurnOrder[nextPlayerIndex];
+      const candidatePlayer = updatedPlayers[candidateId];
+
+      if (!candidatePlayer || candidatePlayer.isDead) {
+        nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
+        continue;
+      }
+
+      if (candidatePlayer.turnsToSkip > 0) {
+        const newTurnsToSkip = candidatePlayer.turnsToSkip - 1;
+        dbUpdates[candidateId] = { turnsToSkip: newTurnsToSkip };
+        updatedPlayers[candidateId] = {
+          ...candidatePlayer,
+          turnsToSkip: newTurnsToSkip,
+        };
+        nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
+        continue;
+      }
+
+      break;
+    }
+
+    const nextPlayerId = currentTurnOrder[nextPlayerIndex];
+
+    if (Object.keys(dbUpdates).length > 0) {
+      await runPlayerUpdateTransaction((currentPlayers) => {
+        return currentPlayers.map((p) => {
+          if (dbUpdates[p.id]) {
+            return { ...p, ...dbUpdates[p.id] };
+          }
+          return p;
+        });
+      });
+    }
+
+    updateRoomData({ currentTurnPlayerId: nextPlayerId });
+  }, [gameState, runPlayerUpdateTransaction, updateRoomData]);
 
   const backToMenu = useCallback(async () => {
     const roomId = gameState.room?.id;
@@ -291,39 +341,43 @@ export function MultiplayerProvider({ children }) {
     if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
   }, [authUser, gameState.room?.id, runPlayerUpdateTransaction, saveRoomId]);
 
-  const updatePlayerStats = useCallback(
-    (playerId, newStats) => {
-      runPlayerUpdateTransaction((players) =>
-        players.map((p) => (p.id === playerId ? { ...p, ...newStats } : p))
-      );
+  const setPlayerSkipTurns = useCallback(
+    (playerId, turns) => {
+      updatePlayerStats(playerId, { turnsToSkip: turns });
     },
-    [runPlayerUpdateTransaction]
+    [updatePlayerStats]
   );
 
-  const killPlayer = useCallback((playerId) => {
-     updatePlayerStats(playerId, {
+  const killPlayer = useCallback(
+    (playerId) => {
+      updatePlayerStats(playerId, {
         isDead: true,
         isWounded: false,
         isStunned: false,
         inventory: [],
         gold: 0,
         woundType: null,
-        skipTurn: false,
+        turnsToSkip: 0,
       });
       setTimeout(() => {
         updatePlayerStats(playerId, { isDead: false });
       }, 5000);
-  }, [updatePlayerStats]);
+    },
+    [updatePlayerStats]
+  );
 
-  const warriorSurvives = useCallback((playerId) => {
-    updatePlayerStats(playerId, {
+  const warriorSurvives = useCallback(
+    (playerId) => {
+      updatePlayerStats(playerId, {
         isWounded: true,
-        woundType: 'leve',
-        skipTurn: true,
+        woundType: "leve",
+        turnsToSkip: 1,
         isDead: false,
         isStunned: false,
-    });
-  }, [updatePlayerStats]);
+      });
+    },
+    [updatePlayerStats]
+  );
 
   const setPlayerSpells = useCallback(
     (playerId, spells) => {
@@ -373,16 +427,16 @@ export function MultiplayerProvider({ children }) {
     () => updateRoomData({ gamePhase: "selection" }),
     [updateRoomData]
   );
-  
+
   const beginTurnRoll = useCallback(() => {
-    runPlayerUpdateTransaction(players =>
-      players.map(p => ({
+    runPlayerUpdateTransaction((players) =>
+      players.map((p) => ({
         ...p,
         gold: 0,
         isWounded: false,
         inventory: [],
         spells: [],
-        skipTurn: false,
+        turnsToSkip: 0,
       }))
     ).then(() => {
       updateRoomData({
@@ -392,47 +446,25 @@ export function MultiplayerProvider({ children }) {
     });
   }, [runPlayerUpdateTransaction, updateRoomData]);
 
-  const submitTurnRoll = useCallback((playerId, roll) => {
-    updateRoomData({
-      [`turnRolls.${playerId}`]: roll
-    });
-  }, [updateRoomData]);
+  const submitTurnRoll = useCallback(
+    (playerId, roll) => {
+      updateRoomData({
+        [`turnRolls.${playerId}`]: roll,
+      });
+    },
+    [updateRoomData]
+  );
 
-  const finalizeTurnOrder = useCallback((sortedPlayerIds) => {
-    updateRoomData({
-      gamePhase: "playing",
-      turnOrder: sortedPlayerIds,
-      currentTurnPlayerId: sortedPlayerIds[0],
-    });
-  }, [updateRoomData]);
-
-  const passTurn = useCallback(async () => {
-    const { room, players } = gameState;
-    if (!room || !room.currentTurnPlayerId || !room.turnOrder || room.turnOrder.length === 0) return;
-  
-    const currentTurnPlayer = players[room.currentTurnPlayerId];
-
-    if (currentTurnPlayer && currentTurnPlayer.skipTurn) {
-        await updatePlayerStats(currentTurnPlayer.id, { skipTurn: false });
-    }
-  
-    const currentTurnOrder = room.turnOrder;
-    const currentPlayerId = room.currentTurnPlayerId;
-  
-    let nextPlayerIndex = (currentTurnOrder.indexOf(currentPlayerId) + 1) % currentTurnOrder.length;
-    let nextPlayer = players[currentTurnOrder[nextPlayerIndex]];
-
-    let attempts = 0;
-    while(nextPlayer && nextPlayer.isDead && attempts < currentTurnOrder.length) {
-      nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
-      nextPlayer = players[currentTurnOrder[nextPlayerIndex]];
-      attempts++;
-    }
-  
-    const nextPlayerId = currentTurnOrder[nextPlayerIndex];
-    updateRoomData({ currentTurnPlayerId: nextPlayerId });
-  
-  }, [gameState, updateRoomData, updatePlayerStats]);
+  const finalizeTurnOrder = useCallback(
+    (sortedPlayerIds) => {
+      updateRoomData({
+        gamePhase: "playing",
+        turnOrder: sortedPlayerIds,
+        currentTurnPlayerId: sortedPlayerIds[0],
+      });
+    },
+    [updateRoomData]
+  );
 
   const selectCharacterForPlayer = useCallback(
     (playerId, character) =>
@@ -479,44 +511,56 @@ export function MultiplayerProvider({ children }) {
     [runPlayerUpdateTransaction]
   );
 
-  const stealItemFromPlayer = useCallback((thiefId, targetId, item, itemIndex) => {
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) => {
-        if (p.id === thiefId) {
-          return { ...p, inventory: [...(p.inventory || []), item] };
-        }
-        if (p.id === targetId) {
-          return { ...p, inventory: p.inventory.filter((_, i) => i !== itemIndex) };
-        }
-        return p;
-      })
-    );
-  }, [runPlayerUpdateTransaction]);
+  const stealItemFromPlayer = useCallback(
+    (thiefId, targetId, item, itemIndex) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => {
+          if (p.id === thiefId) {
+            return { ...p, inventory: [...(p.inventory || []), item] };
+          }
+          if (p.id === targetId) {
+            return {
+              ...p,
+              inventory: p.inventory.filter((_, i) => i !== itemIndex),
+            };
+          }
+          return p;
+        })
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
 
-  const stealGoldFromPlayer = useCallback((thiefId, targetId, amount) => {
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) => {
-        if (p.id === thiefId) {
-          return { ...p, gold: (p.gold || 0) + amount };
-        }
-        if (p.id === targetId) {
-          return { ...p, gold: Math.max(0, (p.gold || 0) - amount) };
-        }
-        return p;
-      })
-    );
-  }, [runPlayerUpdateTransaction]);
-  
-  const addGoldBonus = useCallback((playerId, amount) => {
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) => {
-        if (p.id === playerId) {
-          return { ...p, gold: (p.gold || 0) + amount };
-        }
-        return p;
-      })
-    );
-  }, [runPlayerUpdateTransaction]);
+  const stealGoldFromPlayer = useCallback(
+    (thiefId, targetId, amount) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => {
+          if (p.id === thiefId) {
+            return { ...p, gold: (p.gold || 0) + amount };
+          }
+          if (p.id === targetId) {
+            return { ...p, gold: Math.max(0, (p.gold || 0) - amount) };
+          }
+          return p;
+        })
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
+
+  const addGoldBonus = useCallback(
+    (playerId, amount) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => {
+          if (p.id === playerId) {
+            return { ...p, gold: (p.gold || 0) + amount };
+          }
+          return p;
+        })
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
 
   const proposeEndGame = useCallback(
     () =>
@@ -536,9 +580,11 @@ export function MultiplayerProvider({ children }) {
   );
 
   const endGameAndSaveHistory = useCallback(async () => {
+    // ... Lógica de fim de jogo
   }, [gameState, saveRoomId]);
 
   const processEndGameVotes = useCallback(async () => {
+    // ... Lógica de votação
   }, [gameState, authUser, updateRoomData, endGameAndSaveHistory]);
 
   const value = useMemo(
@@ -571,6 +617,7 @@ export function MultiplayerProvider({ children }) {
       warriorSurvives,
       killPlayer,
       passTurn,
+      setPlayerSkipTurns,
     }),
     [
       gameState,
@@ -601,6 +648,7 @@ export function MultiplayerProvider({ children }) {
       warriorSurvives,
       killPlayer,
       passTurn,
+      setPlayerSkipTurns,
     ]
   );
 

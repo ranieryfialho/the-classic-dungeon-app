@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollText, Wand2, Swords, Axe } from "lucide-react";
+import { ScrollText, Wand2, Swords, Axe } from "lucide-react"; // Ícone Gavel/Rows foi removido da importação
 
 // --- SUB-COMPONENTES PARA ORGANIZAÇÃO ---
 
@@ -26,8 +26,8 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
   let statusColor = "text-green-400";
   let statusBg = "";
 
-  if (player.skipTurn) {
-    statusText = "PULANDO TURNO";
+  if (player.turnsToSkip > 0) {
+    statusText = `PULANDO TURNO (${player.turnsToSkip})`;
     statusColor = "text-orange-400";
     statusBg = "bg-orange-900/30";
   } else if (player.isDead) {
@@ -64,32 +64,29 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
 };
 
 const GoldDisplay = ({ player, isCurrentUser, onToggleGoldVisibility }) => {
-  const shouldShowGold = isCurrentUser;
+    const shouldShowGold = isCurrentUser;
 
-  return (
-    <div>
-      <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-        <span>Ouro</span>
-        {isCurrentUser && (
-          <button
-            className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-            onClick={onToggleGoldVisibility}
-            title={
-              player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"
-            }
-          >
-            {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
-          </button>
-        )}
-      </span>
-      <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-        {shouldShowGold && !player.isGoldHidden
-          ? player.gold.toLocaleString("pt-BR")
-          : "???"}
-      </p>
-    </div>
-  );
+    return (
+        <div>
+            <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
+                <span>Ouro</span>
+                {isCurrentUser && (
+                    <button
+                        className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
+                        onClick={onToggleGoldVisibility}
+                        title={player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
+                    >
+                        {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
+                    </button>
+                )}
+            </span>
+            <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+                {shouldShowGold && !player.isGoldHidden ? player.gold.toLocaleString("pt-BR") : "???"}
+            </p>
+        </div>
+    );
 };
+
 
 const SpellDisplay = ({ player, isCurrentUser }) => {
   const { toggleSpellState } = useMultiplayerGame();
@@ -141,6 +138,8 @@ const ActionButtons = ({
   onSelfHeal,
   onAmbush,
   onOpenDwarfModal,
+  onOpenCageTrap,
+  isCurrentTurn,
 }) => {
   const { setPlayerSpells } = useMultiplayerGame();
   const isCurrentUser = player.id === currentUser?.id;
@@ -186,34 +185,47 @@ const ActionButtons = ({
     !isCurrentUser &&
     isWoundedState &&
     currentUser?.character?.className === "Paladino";
-
-  const isThief = currentUser?.character?.className === "Ladrão";
+  
+  const isThief = currentUser?.character?.className === 'Ladrão';
   const canAmbush = isThief && !isCurrentUser;
-  const isDwarf = player.character.className === "Anão" && isCurrentUser;
+  const isDwarf = player.character.className === 'Anão' && isCurrentUser;
 
   return (
-    <>
+    <div className="space-y-2 mt-3 sm:mt-4">
       {isCurrentUser && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onInfoClick();
-          }}
-          className="w-full mt-3 sm:mt-4 bg-void-purple/80 hover:bg-void-purple text-white font-bold text-xs sm:text-sm"
-        >
-          <ScrollText className="mr-2 h-4 w-4" /> Mais Detalhes
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onInfoClick();
+            }}
+            className="w-full bg-void-purple/80 hover:bg-void-purple text-white font-bold text-xs sm:text-sm"
+          >
+            <ScrollText className="mr-2 h-4 w-4" /> Detalhes
+          </Button>
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenCageTrap();
+            }}
+            disabled={!isCurrentTurn}
+            title={!isCurrentTurn ? "Aguarde o seu turno" : "Cair em uma jaula"}
+            className="w-full bg-stone-600 hover:bg-stone-500 text-white font-bold text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Enjaulamento
+          </Button>
+        </div>
       )}
 
       {isDwarf && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpenDwarfModal();
-          }}
-          className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
-        >
-          <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
+         <Button
+            onClick={(e) => {
+                e.stopPropagation();
+                onOpenDwarfModal();
+            }}
+            className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm"
+            >
+            <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
         </Button>
       )}
 
@@ -223,7 +235,7 @@ const ActionButtons = ({
             e.stopPropagation();
             onAmbush(player);
           }}
-          className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+          className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold text-xs sm:text-sm"
         >
           <Swords className="mr-2 h-4 w-4" /> Emboscar {player.character.name}
         </Button>
@@ -233,7 +245,7 @@ const ActionButtons = ({
         <Button
           onClick={handleManageSpellsClick}
           disabled={isManageSpellsDisabled}
-          className="w-full mt-2 bg-arcane-blue/80 hover:bg-arcane-blue font-bold text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-arcane-blue/80 hover:bg-arcane-blue font-bold text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           title={
             isManageSpellsDisabled
               ? "Você deve usar todas as suas magias antes de recarregar."
@@ -248,14 +260,14 @@ const ActionButtons = ({
       {canHealOthers && (
         <Button
           onClick={onHeal}
-          className="w-full bg-ethereal-blue/80 hover:bg-ethereal-blue text-dungeon-black font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+          className="w-full bg-ethereal-blue/80 hover:bg-ethereal-blue text-dungeon-black font-bold text-xs sm:text-sm"
         >
           🛡️ Curar {player.character.name}
         </Button>
       )}
 
       {canSelfHeal && (
-        <div className="mt-3 sm:mt-4 text-center">
+        <div className="text-center">
           <Button
             onClick={onSelfHeal}
             className="w-full bg-ethereal-blue/80 hover:bg-ethereal-blue text-dungeon-black font-bold text-xs sm:text-sm"
@@ -264,9 +276,10 @@ const ActionButtons = ({
           </Button>
         </div>
       )}
-    </>
+    </div>
   );
 };
+
 
 // --- COMPONENTE PRINCIPAL ---
 
@@ -281,9 +294,10 @@ export function HeroStatusCard({
   onAmbush,
   onOpenDwarfModal,
   onWarriorDeathAttempt,
+  onOpenCageTrap,
 }) {
-  const { currentUser, updatePlayerStats, killPlayer } = useMultiplayerGame();
-
+  const { currentUser, updatePlayerStats, killPlayer, setPlayerSkipTurns } = useMultiplayerGame();
+  
   const [showWoundModal, setShowWoundModal] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [selectedWoundType, setSelectedWoundType] = useState(null);
@@ -305,7 +319,7 @@ export function HeroStatusCard({
     updatePlayerStats(player.id, {
       isWounded: false,
       woundType: null,
-      skipTurn: false,
+      turnsToSkip: 0,
       isStunned: false,
     });
   };
@@ -315,7 +329,7 @@ export function HeroStatusCard({
     updatePlayerStats(player.id, {
       isWounded: false,
       woundType: null,
-      skipTurn: true,
+      turnsToSkip: 1,
       isStunned: false,
     });
   };
@@ -324,8 +338,6 @@ export function HeroStatusCard({
     e.stopPropagation();
     if (isCurrentUser) {
       if (player.isDead) return;
-
-      // Lógica para limpar ferimentos (exceto "Pular Turno")
       if (isWoundedState) {
         updatePlayerStats(player.id, {
           isWounded: false,
@@ -334,7 +346,6 @@ export function HeroStatusCard({
       } else if (player.isStunned) {
         updatePlayerStats(player.id, { isStunned: false });
       } else {
-        // Se não tiver nenhum status para limpar, abre o modal para adicionar um
         setShowWoundModal(true);
       }
     }
@@ -348,7 +359,7 @@ export function HeroStatusCard({
   const handleWoundTypeSelect = (woundType) => {
     setShowWoundModal(false);
     if (woundType === "morto") {
-      if (player.character.className === "Guerreiro") {
+      if (player.character.className === 'Guerreiro') {
         onWarriorDeathAttempt();
       } else {
         killPlayer(player.id);
@@ -370,17 +381,15 @@ export function HeroStatusCard({
       newStats.isWounded = true;
       newStats.isStunned = false;
       newStats.woundType = "grave";
-      newStats.skipTurn = false;
     } else if (selectedWoundType === "ferimento_leve") {
       newStats.isWounded = true;
       newStats.isStunned = false;
       newStats.woundType = "leve";
-      newStats.skipTurn = true;
+      newStats.turnsToSkip = 1;
     } else if (selectedWoundType === "atordoado") {
       newStats.isWounded = false;
       newStats.isStunned = true;
       newStats.woundType = null;
-      newStats.skipTurn = false;
     }
 
     updatePlayerStats(player.id, newStats);
@@ -400,19 +409,19 @@ export function HeroStatusCard({
         onClick={isCurrentUser ? onClick : null}
         className={cn(
           "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card transition-all duration-300",
-          isCurrentUser && "cursor-pointer hover:bg-stone-charcoal",
+          isCurrentUser &&
+            "cursor-pointer hover:bg-stone-charcoal",
           (isWoundedState || player.isDead) && "shadow-lg shadow-blood-red/20",
-          (player.isStunned || player.skipTurn) &&
+          (player.isStunned || player.turnsToSkip > 0) &&
             "shadow-lg shadow-yellow-400/20",
-          isCurrentTurn &&
-            "ring-4 ring-treasure-gold shadow-lg shadow-treasure-gold/50"
+          isCurrentTurn && "ring-4 ring-treasure-gold shadow-lg shadow-treasure-gold/50"
         )}
         style={{ borderColor: player.color }}
       >
         {(isWoundedState || player.isDead) && (
           <div className="absolute inset-0 bg-blood-red/10 pointer-events-none rounded-md" />
         )}
-        {(player.isStunned || player.skipTurn) && (
+        {(player.isStunned || player.turnsToSkip > 0) && (
           <div className="absolute inset-0 bg-yellow-400/10 pointer-events-none rounded-md" />
         )}
 
@@ -494,6 +503,8 @@ export function HeroStatusCard({
             onSelfHeal={handleSelfHeal}
             onAmbush={onAmbush}
             onOpenDwarfModal={onOpenDwarfModal}
+            onOpenCageTrap={onOpenCageTrap}
+            isCurrentTurn={isCurrentTurn}
           />
         </CardContent>
       </Card>
