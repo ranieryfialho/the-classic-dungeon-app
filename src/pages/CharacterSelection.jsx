@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { TeamStatus } from "@/components/game/TeamStatus";
 
 export function CharacterSelection() {
-  const { gameState, currentUser, startGame, selectCharacterForPlayer, unselectCharacter, backToMenu } = useMultiplayerGame();
+  const { gameState, currentUser, beginTurnRoll, selectCharacterForPlayer, unselectCharacter, backToMenu } = useMultiplayerGame();
   const { players } = gameState;
   const playerList = Object.values(players);
 
@@ -81,7 +81,7 @@ export function CharacterSelection() {
             <TeamStatus />
             {isHost && (
               <div className="text-center space-y-3">
-                <Button size="lg" onClick={startGame} disabled={!allPlayersReady} className="bg-green-600 hover:bg-green-700 text-white font-bold text-base sm:text-xl py-4 sm:py-6 px-6 sm:px-10 w-full disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px] sm:min-h-[60px]">Iniciar Jogo</Button>
+                <Button size="lg" onClick={beginTurnRoll} disabled={!allPlayersReady} className="bg-green-600 hover:bg-green-700 text-white font-bold text-base sm:text-xl py-4 sm:py-6 px-6 sm:px-10 w-full disabled:opacity-50 disabled:cursor-not-allowed min-h-[52px] sm:min-h-[60px]">Definir Ordem de Turno</Button>
                 {!allPlayersReady && (<p className="text-xs sm:text-sm text-yellow-400">Aguardando todos os jogadores escolherem...</p>)}
               </div>
             )}
@@ -148,7 +148,7 @@ export function CharacterSelection() {
 
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
         <div className="flex flex-col gap-2 max-w-sm mx-auto">
-          {isHost && (<Button onClick={startGame} disabled={!allPlayersReady} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm min-h-[48px] disabled:opacity-50">{allPlayersReady ? 'Iniciar Jogo' : 'Aguardando jogadores...'}</Button>)}
+          {isHost && (<Button onClick={beginTurnRoll} disabled={!allPlayersReady} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold text-sm min-h-[48px] disabled:opacity-50">{allPlayersReady ? 'Definir Ordem de Turno' : 'Aguardando jogadores...'}</Button>)}
           {!isHost && (<div className="text-center text-sm text-stone-light py-2">Aguardando o host iniciar o jogo...</div>)}
           <Button onClick={handleLeaveRoom} variant="outline" className="w-full bg-transparent border-stone-light/30 text-stone-light hover:text-white hover:bg-stone-light/10 font-bold text-sm min-h-[48px]">Sair da Sala</Button>
         </div>

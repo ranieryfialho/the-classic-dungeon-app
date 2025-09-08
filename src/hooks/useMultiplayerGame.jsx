@@ -85,6 +85,9 @@ export function MultiplayerProvider({ children }) {
               hostId: data.hostId,
               hostName: data.hostName,
               endGameProposal: data.endGameProposal || null,
+              turnOrder: data.turnOrder || [],
+              currentTurnPlayerId: data.currentTurnPlayerId || null,
+              turnRolls: data.turnRolls || {},
             },
             players: playersObj,
             gamePhase: data.gamePhase || "lobby",
@@ -366,19 +369,70 @@ export function MultiplayerProvider({ children }) {
     () => updateRoomData({ gamePhase: "selection" }),
     [updateRoomData]
   );
-  const startGame = useCallback(
-    () =>
-      runPlayerUpdateTransaction((players) =>
-        players.map((p) => ({
-          ...p,
-          gold: 0,
-          isWounded: false,
-          inventory: [],
-          spells: [],
-        }))
-      ).then(() => updateRoomData({ gamePhase: "playing" })),
-    [runPlayerUpdateTransaction, updateRoomData]
-  );
+  
+  const beginTurnRoll = useCallback(() => {
+    runPlayerUpdateTransaction(players =>
+      players.map(p => ({
+        ...p,
+        gold: 0,
+        isWounded: false,
+        inventory: [],
+        spells: [],
+        skipTurn: false,
+      }))
+    ).then(() => {
+      updateRoomData({
+        gamePhase: "rollingForTurn",
+        turnRolls: {},
+      });
+    });
+  }, [runPlayerUpdateTransaction, updateRoomData]);
+
+  const submitTurnRoll = useCallback((playerId, roll) => {
+    updateRoomData({
+      [`turnRolls.${playerId}`]: roll
+    });
+  }, [updateRoomData]);
+
+  const finalizeTurnOrder = useCallback((sortedPlayerIds) => {
+    updateRoomData({
+      gamePhase: "playing",
+      turnOrder: sortedPlayerIds,
+      currentTurnPlayerId: sortedPlayerIds[0],
+    });
+  }, [updateRoomData]);
+
+  const passTurn = useCallback(async () => {
+    const { room, players } = gameState;
+    if (!room || !room.currentTurnPlayerId || !room.turnOrder || room.turnOrder.length === 0) return;
+  
+    const currentTurnPlayer = players[room.currentTurnPlayerId];
+  
+    if (currentTurnPlayer && currentTurnPlayer.skipTurn) {
+      await updatePlayerStats(currentTurnPlayer.id, { skipTurn: false });
+    }
+  
+    const roomRef = doc(db, "rooms", room.id);
+    const roomSnap = await getDoc(roomRef);
+    const latestRoomData = roomSnap.data();
+    const latestPlayersData = (latestRoomData.players || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
+    const currentTurnOrder = latestRoomData.turnOrder || [];
+    const currentPlayerId = latestRoomData.currentTurnPlayerId;
+  
+    let nextPlayerIndex = (currentTurnOrder.indexOf(currentPlayerId) + 1) % currentTurnOrder.length;
+    let nextPlayer = latestPlayersData[currentTurnOrder[nextPlayerIndex]];
+  
+    let attempts = 0;
+    while(nextPlayer && nextPlayer.isDead && attempts < currentTurnOrder.length) {
+      nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
+      nextPlayer = latestPlayersData[currentTurnOrder[nextPlayerIndex]];
+      attempts++;
+    }
+  
+    const nextPlayerId = currentTurnOrder[nextPlayerIndex];
+    updateRoomData({ currentTurnPlayerId: nextPlayerId });
+  
+  }, [gameState, updateRoomData, updatePlayerStats]);
 
   const selectCharacterForPlayer = useCallback(
     (playerId, character) =>
@@ -502,7 +556,9 @@ export function MultiplayerProvider({ children }) {
       goToJoinRoom,
       goToProfile,
       startGameSelection,
-      startGame,
+      beginTurnRoll,
+      submitTurnRoll,
+      finalizeTurnOrder,
       selectCharacterForPlayer,
       unselectCharacter,
       proposeEndGame,
@@ -516,6 +572,7 @@ export function MultiplayerProvider({ children }) {
       addGoldBonus,
       warriorSurvives,
       killPlayer,
+      passTurn,
     }),
     [
       gameState,
@@ -529,7 +586,9 @@ export function MultiplayerProvider({ children }) {
       goToJoinRoom,
       goToProfile,
       startGameSelection,
-      startGame,
+      beginTurnRoll,
+      submitTurnRoll,
+      finalizeTurnOrder,
       selectCharacterForPlayer,
       unselectCharacter,
       proposeEndGame,
@@ -543,6 +602,7 @@ export function MultiplayerProvider({ children }) {
       addGoldBonus,
       warriorSurvives,
       killPlayer,
+      passTurn,
     ]
   );
 

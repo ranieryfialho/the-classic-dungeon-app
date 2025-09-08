@@ -274,6 +274,7 @@ export function HeroStatusCard({
   player,
   onClick,
   isCurrentUser,
+  isCurrentTurn,
   onItemClick,
   onInfoClick,
   onManageSpells,
@@ -400,12 +401,13 @@ export function HeroStatusCard({
       <Card
         onClick={isCurrentUser ? onClick : null}
         className={cn(
-          "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card",
-          isCurrentUser &&
-            "cursor-pointer hover:bg-stone-charcoal transition-colors",
+          "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card transition-all duration-300",
+          isCurrentUser && "cursor-pointer hover:bg-stone-charcoal",
           (isWoundedState || player.isDead) && "shadow-lg shadow-blood-red/20",
           (player.isStunned || player.skipTurn) &&
-            "shadow-lg shadow-yellow-400/20"
+            "shadow-lg shadow-yellow-400/20",
+          isCurrentTurn &&
+            "ring-4 ring-treasure-gold shadow-lg shadow-treasure-gold/50"
         )}
         style={{ borderColor: player.color }}
       >
