@@ -12,13 +12,14 @@ import { characterClasses } from "@/config/characterClasses";
 import { AmbushModal } from "@/components/game/AmbushModal";
 import { DwarfAbilityModal } from "@/components/game/DwarfAbilityModal";
 import { WarriorAbilityModal } from "@/components/game/WarriorAbilityModal";
-import { CageTrapModal } from "@/components/game/CageTrapModal"; // Nova importação
+import { CageTrapModal } from "@/components/game/CageTrapModal";
+import { GameLog } from "@/components/game/GameLog"; // Importe o novo componente
 
 export function GameDashboard() {
-  const { 
-    gameState, 
-    currentUser, 
-    proposeEndGame, 
+  const {
+    gameState,
+    currentUser,
+    proposeEndGame,
     setPlayerSpells,
     stealGoldFromPlayer,
     stealItemFromPlayer,
@@ -26,7 +27,8 @@ export function GameDashboard() {
     warriorSurvives,
     killPlayer,
     passTurn,
-    setPlayerSkipTurns // Nova importação
+    setPlayerSkipTurns,
+    addLogEntry,
   } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
   const { room, players } = gameState;
@@ -40,7 +42,7 @@ export function GameDashboard() {
   const [ambushTarget, setAmbushTarget] = useState(null);
   const [isDwarfModalOpen, setIsDwarfModalOpen] = useState(false);
   const [warriorLastChance, setWarriorLastChance] = useState(null);
-  const [isCageModalOpen, setIsCageModalOpen] = useState(false); // Novo estado
+  const [isCageModalOpen, setIsCageModalOpen] = useState(false);
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -51,15 +53,17 @@ export function GameDashboard() {
   const handleItemClick = (item) => {
     setShowingItem(item);
   };
-  
+
   const handleAmbushClick = (targetPlayer) => {
+    addLogEntry(`🏹 ${currentUser.character.name} está tentando emboscar ${targetPlayer.character.name}.`);
     setAmbushTarget(targetPlayer);
   };
-  
+
   const handleDwarfAbilityConfirm = () => {
+    addLogEntry(`🔨 ${currentUser.character.name} usou Mestre do Machado e ganhou 1.000 de ouro!`);
     addGoldBonus(currentUser.id, 1000);
   };
-  
+
   const handleWarriorDeathAttempt = (player) => {
     setWarriorLastChance(player);
   };
@@ -68,7 +72,7 @@ export function GameDashboard() {
     if (!currentUser || !currentUser.character) return;
     const classData = characterClasses.find(c => c.name === currentUser.character.className);
     if (!classData) return;
-    
+
     if (currentUser.gold >= classData.goldTarget) {
       proposeEndGame();
     } else {
@@ -83,7 +87,6 @@ export function GameDashboard() {
   return (
     <>
       <div className="h-full w-full bg-transparent safe-area-top safe-area-left safe-area-right">
-        {/* ... (código do header, que já está correto) ... */}
         <header className="hidden sm:block container-mobile-safe py-4 sm:py-8 mb-4 sm:mb-8">
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center">
@@ -118,26 +121,29 @@ export function GameDashboard() {
           </div>
         </header>
         <main className="container-mobile-safe pb-24 sm:pb-8">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-              {playerList.map(player => (
-                <HeroStatusCard 
-                  key={player.id} 
-                  player={player} 
-                  isCurrentUser={player.id === currentUser.id}
-                  isCurrentTurn={player.id === room?.currentTurnPlayerId} 
-                  onClick={() => handleCardClick(player)} 
-                  onItemClick={handleItemClick}
-                  onInfoClick={() => setShowingInfoForPlayer(player)}
-                  onManageSpells={() => setEditingSpellsForPlayer(player)}
-                  onAmbush={handleAmbushClick}
-                  onOpenDwarfModal={() => setIsDwarfModalOpen(true)}
-                  onWarriorDeathAttempt={() => handleWarriorDeathAttempt(player)}
-                  onOpenCageTrap={() => setIsCageModalOpen(true)}
-                />
-              ))}
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-6">
+                {playerList.map(player => (
+                    <HeroStatusCard
+                    key={player.id}
+                    player={player}
+                    isCurrentUser={player.id === currentUser.id}
+                    isCurrentTurn={player.id === room?.currentTurnPlayerId}
+                    onClick={() => handleCardClick(player)}
+                    onItemClick={handleItemClick}
+                    onInfoClick={() => setShowingInfoForPlayer(player)}
+                    onManageSpells={() => setEditingSpellsForPlayer(player)}
+                    onAmbush={handleAmbushClick}
+                    onOpenDwarfModal={() => setIsDwarfModalOpen(true)}
+                    onWarriorDeathAttempt={() => handleWarriorDeathAttempt(player)}
+                    onOpenCageTrap={() => setIsCageModalOpen(true)}
+                    />
+                ))}
+                </div>
+                <div className="hidden lg:block lg:col-span-1">
+                    <GameLog />
+                </div>
             </div>
-          </div>
         </main>
         <div className="sm:hidden fixed bottom-0 left-0 right-0 bg-stone-charcoal/95 backdrop-blur-md border-t border-stone-light/20 p-4 safe-area-bottom">
           <div className="flex flex-col gap-2 max-w-sm mx-auto">
@@ -157,20 +163,20 @@ export function GameDashboard() {
       <ItemDetailsModal item={showingItem} isOpen={!!showingItem} onClose={() => setShowingItem(null)}/>
       <EndGameModal />
       <WoundRulesModal isOpen={showWoundRules} onClose={() => setShowWoundRules(false)}/>
-      
-      <CharacterInfoModal 
-        player={showingInfoForPlayer} 
-        isOpen={!!showingInfoForPlayer} 
+
+      <CharacterInfoModal
+        player={showingInfoForPlayer}
+        isOpen={!!showingInfoForPlayer}
         onClose={() => setShowingInfoForPlayer(null)}
       />
 
-      <SpellbookModal 
+      <SpellbookModal
         player={editingSpellsForPlayer}
         isOpen={!!editingSpellsForPlayer}
         onClose={() => setEditingSpellsForPlayer(null)}
         onSave={setPlayerSpells}
       />
-      
+
       <AmbushModal
         isOpen={!!ambushTarget}
         onClose={() => setAmbushTarget(null)}

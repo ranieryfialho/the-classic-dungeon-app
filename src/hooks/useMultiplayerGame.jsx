@@ -21,6 +21,9 @@ import {
   onSnapshot,
   deleteDoc,
   runTransaction,
+  query,
+  orderBy,
+  limit,
 } from "firebase/firestore";
 
 const GameContext = createContext(null);
@@ -30,6 +33,7 @@ const initialGameState = {
   players: {},
   gamePhase: "menu",
   connectionError: null,
+  log: [], // Adicionado para o log de eventos
 };
 
 export function MultiplayerProvider({ children }) {
@@ -54,6 +58,23 @@ export function MultiplayerProvider({ children }) {
     }
   }, []);
 
+  const addLogEntry = useCallback(
+    async (message) => {
+      const roomId = getSavedRoomId();
+      if (!roomId) return;
+      try {
+        const logCollectionRef = collection(db, "rooms", roomId, "log");
+        await addDoc(logCollectionRef, {
+          message,
+          timestamp: serverTimestamp(),
+        });
+      } catch (error) {
+        console.error("Erro ao adicionar entrada no log:", error);
+      }
+    },
+    [getSavedRoomId]
+  );
+
   const setupRealtimeListener = useCallback(
     (roomId) => {
       if (unsubscribeRoomRef.current) {
@@ -62,7 +83,7 @@ export function MultiplayerProvider({ children }) {
       if (!roomId) return;
 
       const roomRef = doc(db, "rooms", roomId);
-      unsubscribeRoomRef.current = onSnapshot(
+      const roomUnsubscribe = onSnapshot(
         roomRef,
         (snap) => {
           if (!snap.exists()) {
@@ -102,6 +123,25 @@ export function MultiplayerProvider({ children }) {
           }));
         }
       );
+
+      const logCollectionRef = collection(db, "rooms", roomId, "log");
+      const logQuery = query(
+        logCollectionRef,
+        orderBy("timestamp", "desc"),
+        limit(50)
+      );
+      const logUnsubscribe = onSnapshot(logQuery, (snapshot) => {
+        const logEntries = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setGameState((prev) => ({ ...prev, log: logEntries }));
+      });
+
+      unsubscribeRoomRef.current = () => {
+        roomUnsubscribe();
+        logUnsubscribe();
+      };
     },
     [saveRoomId]
   );
@@ -278,6 +318,11 @@ export function MultiplayerProvider({ children }) {
     const currentPlayerId = room.currentTurnPlayerId;
     const currentPlayerIndex = currentTurnOrder.indexOf(currentPlayerId);
 
+    const currentPlayer = players[currentPlayerId];
+    if (currentPlayer) {
+      addLogEntry(`➡️ ${currentPlayer.character.name} finalizou o seu turno.`);
+    }
+
     const updatedPlayers = { ...players };
     const dbUpdates = {};
 
@@ -299,6 +344,9 @@ export function MultiplayerProvider({ children }) {
           ...candidatePlayer,
           turnsToSkip: newTurnsToSkip,
         };
+        addLogEntry(
+          `⏳ ${candidatePlayer.character.name} continua preso e perde o turno.`
+        );
         nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
         continue;
       }
@@ -320,7 +368,7 @@ export function MultiplayerProvider({ children }) {
     }
 
     updateRoomData({ currentTurnPlayerId: nextPlayerId });
-  }, [gameState, runPlayerUpdateTransaction, updateRoomData]);
+  }, [gameState, runPlayerUpdateTransaction, updateRoomData, addLogEntry]);
 
   const backToMenu = useCallback(async () => {
     const roomId = gameState.room?.id;
@@ -343,13 +391,25 @@ export function MultiplayerProvider({ children }) {
 
   const setPlayerSkipTurns = useCallback(
     (playerId, turns) => {
+      const player = gameState.players[playerId];
+      if (player) {
+        addLogEntry(
+          `⛓️ ${player.character.name} caiu em uma jaula e ficará ${turns} turno(s) sem jogar.`
+        );
+      }
       updatePlayerStats(playerId, { turnsToSkip: turns });
     },
-    [updatePlayerStats]
+    [updatePlayerStats, addLogEntry, gameState.players]
   );
 
   const killPlayer = useCallback(
     (playerId) => {
+      const player = gameState.players[playerId];
+      if (player) {
+        addLogEntry(
+          `💀 ${player.character.name} foi derrotado e perdeu todos os seus tesouros.`
+        );
+      }
       updatePlayerStats(playerId, {
         isDead: true,
         isWounded: false,
@@ -363,11 +423,17 @@ export function MultiplayerProvider({ children }) {
         updatePlayerStats(playerId, { isDead: false });
       }, 5000);
     },
-    [updatePlayerStats]
+    [updatePlayerStats, addLogEntry, gameState.players]
   );
 
   const warriorSurvives = useCallback(
     (playerId) => {
+      const player = gameState.players[playerId];
+      if (player) {
+        addLogEntry(
+          `🛡️ ${player.character.name} usou Fôlego de Batalha e sobreviveu por um triz!`
+        );
+      }
       updatePlayerStats(playerId, {
         isWounded: true,
         woundType: "leve",
@@ -376,14 +442,17 @@ export function MultiplayerProvider({ children }) {
         isStunned: false,
       });
     },
-    [updatePlayerStats]
+    [updatePlayerStats, addLogEntry, gameState.players]
   );
 
   const setPlayerSpells = useCallback(
     (playerId, spells) => {
+      addLogEntry(
+        `📖 ${gameState.players[playerId]?.character.name} preparou suas magias.`
+      );
       updatePlayerStats(playerId, { spells });
     },
-    [updatePlayerStats]
+    [updatePlayerStats, addLogEntry, gameState.players]
   );
 
   const toggleSpellState = useCallback(
@@ -393,7 +462,11 @@ export function MultiplayerProvider({ children }) {
           if (p.id === playerId) {
             const newSpells = [...p.spells];
             if (newSpells[spellIndex]) {
-              newSpells[spellIndex].used = !newSpells[spellIndex].used;
+              const spell = newSpells[spellIndex];
+              spell.used = !spell.used;
+              if (spell.used) {
+                addLogEntry(`✨ ${p.character.name} usou ${spell.name}!`);
+              }
             }
             return { ...p, spells: newSpells };
           }
@@ -401,18 +474,21 @@ export function MultiplayerProvider({ children }) {
         })
       );
     },
-    [runPlayerUpdateTransaction]
+    [runPlayerUpdateTransaction, addLogEntry]
   );
 
   const removePlayer = useCallback(
     (playerIdToRemove) => {
       const me = authUser ? gameState.players[authUser.uid] : null;
       if (!me || !me.isHost || me.id === playerIdToRemove) return;
+      const removedPlayerName =
+        gameState.players[playerIdToRemove]?.name || "um jogador";
+      addLogEntry(`👋 ${removedPlayerName} foi removido da sala.`);
       runPlayerUpdateTransaction((currentPlayers) =>
         currentPlayers.filter((p) => p.id !== playerIdToRemove)
       );
     },
-    [authUser, gameState.players, runPlayerUpdateTransaction]
+    [authUser, gameState.players, runPlayerUpdateTransaction, addLogEntry]
   );
 
   const goToJoinRoom = useCallback(
@@ -423,12 +499,15 @@ export function MultiplayerProvider({ children }) {
     () => setGameState((s) => ({ ...s, gamePhase: "profile" })),
     []
   );
-  const startGameSelection = useCallback(
-    () => updateRoomData({ gamePhase: "selection" }),
-    [updateRoomData]
-  );
+  const startGameSelection = useCallback(() => {
+    addLogEntry("⚔️ O Host iniciou a seleção de personagens!");
+    updateRoomData({ gamePhase: "selection" });
+  }, [updateRoomData, addLogEntry]);
 
   const beginTurnRoll = useCallback(() => {
+    addLogEntry(
+      "🎲 Todos estão prontos! Rolando dados para a ordem de turno..."
+    );
     runPlayerUpdateTransaction((players) =>
       players.map((p) => ({
         ...p,
@@ -444,50 +523,72 @@ export function MultiplayerProvider({ children }) {
         turnRolls: {},
       });
     });
-  }, [runPlayerUpdateTransaction, updateRoomData]);
+  }, [runPlayerUpdateTransaction, updateRoomData, addLogEntry]);
 
   const submitTurnRoll = useCallback(
     (playerId, roll) => {
+      const player = gameState.players[playerId];
+      if (player) {
+        addLogEntry(`🎲 ${player.name} rolou um ${roll}.`);
+      }
       updateRoomData({
         [`turnRolls.${playerId}`]: roll,
       });
     },
-    [updateRoomData]
+    [updateRoomData, addLogEntry, gameState.players]
   );
 
   const finalizeTurnOrder = useCallback(
     (sortedPlayerIds) => {
+      addLogEntry("📜 A ordem de turno foi definida!");
       updateRoomData({
         gamePhase: "playing",
         turnOrder: sortedPlayerIds,
         currentTurnPlayerId: sortedPlayerIds[0],
       });
     },
-    [updateRoomData]
+    [updateRoomData, addLogEntry]
   );
 
   const selectCharacterForPlayer = useCallback(
-    (playerId, character) =>
+    (playerId, character) => {
+      addLogEntry(
+        `👤 ${gameState.players[playerId]?.name} escolheu ser ${character.name}, o ${character.className}.`
+      );
       runPlayerUpdateTransaction((players) =>
         players.map((p) =>
           p.id === playerId ? { ...p, character, ready: true } : p
         )
-      ),
-    [runPlayerUpdateTransaction]
+      );
+    },
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
   const unselectCharacter = useCallback(
-    (playerId) =>
+    (playerId) => {
+      const player = gameState.players[playerId];
+      if (player && player.character) {
+        addLogEntry(
+          `🔄 ${player.name} mudou de ideia e desmarcou ${player.character.name}.`
+        );
+      }
       runPlayerUpdateTransaction((players) =>
         players.map((p) =>
           p.id === playerId ? { ...p, character: null, ready: false } : p
         )
-      ),
-    [runPlayerUpdateTransaction]
+      );
+    },
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
   const addItemToInventory = useCallback(
     (playerId, itemId) => {
       const item = specialTreasures.find((i) => i.id === itemId);
       if (!item) return;
+      const player = gameState.players[playerId];
+      if (player) {
+        addLogEntry(
+          `💎 ${player.character.name} encontrou um item: ${item.name}!`
+        );
+      }
       runPlayerUpdateTransaction((players) =>
         players.map((p) =>
           p.id === playerId
@@ -496,10 +597,15 @@ export function MultiplayerProvider({ children }) {
         )
       );
     },
-    [runPlayerUpdateTransaction]
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
   const removeItemFromInventory = useCallback(
     (playerId, itemIndex) => {
+      const player = gameState.players[playerId];
+      const item = player?.inventory[itemIndex];
+      if (player && item) {
+        addLogEntry(`🗑️ ${player.character.name} descartou ${item.name}.`);
+      }
       runPlayerUpdateTransaction((players) =>
         players.map((p) =>
           p.id === playerId
@@ -508,11 +614,18 @@ export function MultiplayerProvider({ children }) {
         )
       );
     },
-    [runPlayerUpdateTransaction]
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
 
   const stealItemFromPlayer = useCallback(
     (thiefId, targetId, item, itemIndex) => {
+      const thief = gameState.players[thiefId];
+      const target = gameState.players[targetId];
+      if (thief && target) {
+        addLogEntry(
+          `🗡️ ${thief.character.name} roubou ${item.name} de ${target.character.name}!`
+        );
+      }
       runPlayerUpdateTransaction((players) =>
         players.map((p) => {
           if (p.id === thiefId) {
@@ -528,11 +641,20 @@ export function MultiplayerProvider({ children }) {
         })
       );
     },
-    [runPlayerUpdateTransaction]
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
 
   const stealGoldFromPlayer = useCallback(
     (thiefId, targetId, amount) => {
+      const thief = gameState.players[thiefId];
+      const target = gameState.players[targetId];
+      if (thief && target) {
+        addLogEntry(
+          `💰 ${thief.character.name} roubou ${amount.toLocaleString(
+            "pt-BR"
+          )} de ouro de ${target.character.name}!`
+        );
+      }
       runPlayerUpdateTransaction((players) =>
         players.map((p) => {
           if (p.id === thiefId) {
@@ -545,7 +667,7 @@ export function MultiplayerProvider({ children }) {
         })
       );
     },
-    [runPlayerUpdateTransaction]
+    [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
 
   const addGoldBonus = useCallback(
@@ -562,21 +684,23 @@ export function MultiplayerProvider({ children }) {
     [runPlayerUpdateTransaction]
   );
 
-  const proposeEndGame = useCallback(
-    () =>
-      updateRoomData({
-        endGameProposal: {
-          proposerId: authUser.uid,
-          votes: { [authUser.uid]: "proposer" },
-          status: "pending",
-        },
-      }),
-    [authUser, updateRoomData]
-  );
+  const proposeEndGame = useCallback(() => {
+    addLogEntry(`🏁 ${authUser.displayName} propôs o fim do jogo!`);
+    updateRoomData({
+      endGameProposal: {
+        proposerId: authUser.uid,
+        votes: { [authUser.uid]: "proposer" },
+        status: "pending",
+      },
+    });
+  }, [authUser, updateRoomData, addLogEntry]);
   const voteOnEndGame = useCallback(
-    (vote) =>
-      updateRoomData({ [`endGameProposal.votes.${authUser.uid}`]: vote }),
-    [authUser, updateRoomData]
+    (vote) => {
+      const voteText = vote === "accept" ? "aceitou" : "rejeitou";
+      addLogEntry(`🗳️ ${authUser.displayName} ${voteText} o fim do jogo.`);
+      updateRoomData({ [`endGameProposal.votes.${authUser.uid}`]: vote });
+    },
+    [authUser, updateRoomData, addLogEntry]
   );
 
   const endGameAndSaveHistory = useCallback(async () => {
@@ -618,6 +742,7 @@ export function MultiplayerProvider({ children }) {
       killPlayer,
       passTurn,
       setPlayerSkipTurns,
+      addLogEntry,
     }),
     [
       gameState,
@@ -649,6 +774,7 @@ export function MultiplayerProvider({ children }) {
       killPlayer,
       passTurn,
       setPlayerSkipTurns,
+      addLogEntry,
     ]
   );
 

@@ -17,10 +17,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollText, Wand2, Swords, Axe } from "lucide-react"; // Ícone Gavel/Rows foi removido da importação
+import { ScrollText, Wand2, Swords, Axe } from "lucide-react";
 
-// --- SUB-COMPONENTES PARA ORGANIZAÇÃO ---
-
+// --- SUB-COMPONENTES (permanecem iguais) ---
 const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
   let statusText = "NORMAL";
   let statusColor = "text-green-400";
@@ -64,29 +63,32 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
 };
 
 const GoldDisplay = ({ player, isCurrentUser, onToggleGoldVisibility }) => {
-    const shouldShowGold = isCurrentUser;
+  const shouldShowGold = isCurrentUser;
 
-    return (
-        <div>
-            <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span>Ouro</span>
-                {isCurrentUser && (
-                    <button
-                        className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-                        onClick={onToggleGoldVisibility}
-                        title={player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
-                    >
-                        {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
-                    </button>
-                )}
-            </span>
-            <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                {shouldShowGold && !player.isGoldHidden ? player.gold.toLocaleString("pt-BR") : "???"}
-            </p>
-        </div>
-    );
+  return (
+    <div>
+      <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
+        <span>Ouro</span>
+        {isCurrentUser && (
+          <button
+            className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
+            onClick={onToggleGoldVisibility}
+            title={
+              player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"
+            }
+          >
+            {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
+          </button>
+        )}
+      </span>
+      <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+        {shouldShowGold && !player.isGoldHidden
+          ? player.gold.toLocaleString("pt-BR")
+          : "???"}
+      </p>
+    </div>
+  );
 };
-
 
 const SpellDisplay = ({ player, isCurrentUser }) => {
   const { toggleSpellState } = useMultiplayerGame();
@@ -102,7 +104,7 @@ const SpellDisplay = ({ player, isCurrentUser }) => {
   return (
     <div className="mt-3 sm:mt-4 pt-3 border-t border-stone-light/10">
       <h5 className="text-xs sm:text-sm text-stone-light mb-2">Grimório</h5>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-1 sm:gap-2">
         {player.spells.map((spell, index) => (
           <button
             key={index}
@@ -113,12 +115,12 @@ const SpellDisplay = ({ player, isCurrentUser }) => {
             }}
             title={spell.description}
             className={cn(
-              "p-2 rounded-md flex flex-col items-center justify-center text-center transition-opacity duration-200",
+              "p-1 sm:p-2 rounded-md flex flex-col items-center justify-center text-center transition-opacity duration-200",
               spell.used ? "bg-stone-800 opacity-40" : "bg-dungeon-black/50",
               isCurrentUser && !spell.used && "hover:bg-dungeon-black/80"
             )}
           >
-            <span className="text-2xl">{spell.icon}</span>
+            <span className="text-xl sm:text-2xl">{spell.icon}</span>
             <span className="text-xs text-white font-semibold truncate w-full">
               {spell.name}
             </span>
@@ -185,10 +187,10 @@ const ActionButtons = ({
     !isCurrentUser &&
     isWoundedState &&
     currentUser?.character?.className === "Paladino";
-  
-  const isThief = currentUser?.character?.className === 'Ladrão';
+
+  const isThief = currentUser?.character?.className === "Ladrão";
   const canAmbush = isThief && !isCurrentUser;
-  const isDwarf = player.character.className === 'Anão' && isCurrentUser;
+  const isDwarf = player.character.className === "Anão" && isCurrentUser;
 
   return (
     <div className="space-y-2 mt-3 sm:mt-4">
@@ -218,14 +220,14 @@ const ActionButtons = ({
       )}
 
       {isDwarf && (
-         <Button
-            onClick={(e) => {
-                e.stopPropagation();
-                onOpenDwarfModal();
-            }}
-            className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm"
-            >
-            <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDwarfModal();
+          }}
+          className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold text-xs sm:text-sm"
+        >
+          <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
         </Button>
       )}
 
@@ -280,7 +282,6 @@ const ActionButtons = ({
   );
 };
 
-
 // --- COMPONENTE PRINCIPAL ---
 
 export function HeroStatusCard({
@@ -296,8 +297,9 @@ export function HeroStatusCard({
   onWarriorDeathAttempt,
   onOpenCageTrap,
 }) {
-  const { currentUser, updatePlayerStats, killPlayer, setPlayerSkipTurns } = useMultiplayerGame();
-  
+  const { currentUser, updatePlayerStats, killPlayer, setPlayerSkipTurns } =
+    useMultiplayerGame();
+
   const [showWoundModal, setShowWoundModal] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [selectedWoundType, setSelectedWoundType] = useState(null);
@@ -359,7 +361,7 @@ export function HeroStatusCard({
   const handleWoundTypeSelect = (woundType) => {
     setShowWoundModal(false);
     if (woundType === "morto") {
-      if (player.character.className === 'Guerreiro') {
+      if (player.character.className === "Guerreiro") {
         onWarriorDeathAttempt();
       } else {
         killPlayer(player.id);
@@ -408,13 +410,14 @@ export function HeroStatusCard({
       <Card
         onClick={isCurrentUser ? onClick : null}
         className={cn(
-          "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col h-full relative hero-status-card transition-all duration-300",
-          isCurrentUser &&
-            "cursor-pointer hover:bg-stone-charcoal",
+          "bg-stone-charcoal/80 border-l-4 sm:border-l-8 text-white flex flex-col relative hero-status-card transition-all duration-300",
+          "max-h-[85vh] sm:max-h-[calc(100vh-10rem)]",
+          isCurrentUser && "cursor-pointer hover:bg-stone-charcoal",
           (isWoundedState || player.isDead) && "shadow-lg shadow-blood-red/20",
           (player.isStunned || player.turnsToSkip > 0) &&
             "shadow-lg shadow-yellow-400/20",
-          isCurrentTurn && "ring-4 ring-treasure-gold shadow-lg shadow-treasure-gold/50"
+          isCurrentTurn &&
+            "ring-4 ring-treasure-gold shadow-lg shadow-treasure-gold/50"
         )}
         style={{ borderColor: player.color }}
       >
@@ -425,7 +428,7 @@ export function HeroStatusCard({
           <div className="absolute inset-0 bg-yellow-400/10 pointer-events-none rounded-md" />
         )}
 
-        <CardHeader className="p-3 sm:p-6">
+        <CardHeader className="p-3 sm:p-6 flex-shrink-0">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
             <div className="flex-1 min-w-0">
               <CardTitle
@@ -446,8 +449,8 @@ export function HeroStatusCard({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-grow flex flex-col justify-between p-3 sm:p-6 pt-0">
-          <div className="flex-grow flex items-center justify-center my-2 sm:my-4">
+        <div className="flex-grow overflow-y-auto px-3 sm:px-6 custom-scrollbar">
+          <div className="flex items-center justify-center my-2 sm:my-4">
             {classData?.gifUrl && (
               <img
                 src={classData.gifUrl}
@@ -493,7 +496,9 @@ export function HeroStatusCard({
           </div>
 
           <SpellDisplay player={player} isCurrentUser={isCurrentUser} />
+        </div>
 
+        <div className="p-3 sm:p-6 pt-3 flex-shrink-0">
           <ActionButtons
             player={player}
             currentUser={currentUser}
@@ -506,7 +511,7 @@ export function HeroStatusCard({
             onOpenCageTrap={onOpenCageTrap}
             isCurrentTurn={isCurrentTurn}
           />
-        </CardContent>
+        </div>
       </Card>
 
       <WoundSelectionModal
@@ -528,6 +533,8 @@ export function HeroStatusCard({
     </>
   );
 }
+
+// ... O restante do arquivo (WoundSelectionModal e PenaltyModal) permanece igual ...
 
 function WoundSelectionModal({ isOpen, onClose, onSelect }) {
   const woundTypes = [
