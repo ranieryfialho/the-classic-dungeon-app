@@ -611,7 +611,7 @@ function PenaltyModal({
   goldToRemove,
   onAdjustGold,
 }) {
-  if (!woundType) return null;
+  if (!woundType || !player) return null;
 
   const titles = {
     ferimento_grave: "🩸 Ferimento Grave",
@@ -625,6 +625,7 @@ function PenaltyModal({
     atordoado: "Abandone um dos tesouros e/ou ouro.",
   };
 
+  const hasResourcesToDiscard = player.gold > 0 || player.inventory?.length > 0;
   const isPenaltySelected = itemsToDiscard.length > 0 || goldToRemove > 0;
 
   const handleItemToggle = (itemIndex) => {
@@ -722,7 +723,7 @@ function PenaltyModal({
           </Button>
           <Button
             onClick={onConfirm}
-            disabled={!isPenaltySelected}
+            disabled={hasResourcesToDiscard && !isPenaltySelected}
             className="flex-1 bg-blood-red hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Confirmar Penalidade
