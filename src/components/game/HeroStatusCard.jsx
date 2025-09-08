@@ -1,9 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { characterClasses } from "@/config/characterClasses";
 import { cn } from "@/lib/utils";
-
-// Componentes UI importados
 import {
   Card,
   CardContent,
@@ -19,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollText, Wand2 } from "lucide-react";
+import { ScrollText, Wand2, Swords } from "lucide-react";
 
 // --- SUB-COMPONENTES PARA ORGANIZAÇÃO ---
 
@@ -65,8 +63,11 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
   );
 };
 
-const GoldDisplay = ({ player, isCurrentUser, hideMyGold, onToggle }) => {
-  const shouldShowGold = isCurrentUser ? !hideMyGold : false;
+const GoldDisplay = ({ player, isCurrentUser, onToggleGoldVisibility }) => {
+  // CORREÇÃO APLICADA AQUI:
+  // O ouro só deve ser visível se for o card do próprio jogador (isCurrentUser).
+  // Para todos os outros, o valor será "???".
+  const shouldShowGold = isCurrentUser;
 
   return (
     <div>
@@ -75,15 +76,19 @@ const GoldDisplay = ({ player, isCurrentUser, hideMyGold, onToggle }) => {
         {isCurrentUser && (
           <button
             className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-            onClick={onToggle}
-            title={hideMyGold ? "Esconder Meu Ouro" : "Mostrar Meu Ouro"}
+            onClick={onToggleGoldVisibility}
+            title={
+              player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"
+            }
           >
-            {hideMyGold ? "👁️‍🗨️" : "👁️"}
+            {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
           </button>
         )}
       </span>
       <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-        {shouldShowGold ? player.gold.toLocaleString("pt-BR") : "???"}
+        {shouldShowGold && !player.isGoldHidden
+          ? player.gold.toLocaleString("pt-BR")
+          : "???"}
       </p>
     </div>
   );
@@ -137,6 +142,7 @@ const ActionButtons = ({
   onManageSpells,
   onHeal,
   onSelfHeal,
+  onAmbush,
 }) => {
   const { setPlayerSpells } = useMultiplayerGame();
   const isCurrentUser = player.id === currentUser?.id;
@@ -145,7 +151,6 @@ const ActionButtons = ({
     player.spells?.every((s) => s.used) && player.spells?.length > 0;
   const isSpellbookFull = player.spells?.length === 6;
 
-  // Lógica para desabilitar o botão de magias
   const isManageSpellsDisabled = isSpellbookFull && !allSpellsUsed;
 
   const handleManageSpellsClick = (e) => {
@@ -184,8 +189,23 @@ const ActionButtons = ({
     isWoundedState &&
     currentUser?.character?.className === "Paladino";
 
+  const isThief = currentUser?.character?.className === "Ladrão";
+  const canAmbush = isThief && !isCurrentUser;
+
   return (
     <>
+      {canAmbush && (
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAmbush(player);
+          }}
+          className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+        >
+          <Swords className="mr-2 h-4 w-4" /> Emboscar {player.character.name}
+        </Button>
+      )}
+
       {isCurrentUser && (
         <Button
           onClick={(e) => {
@@ -246,6 +266,7 @@ export function HeroStatusCard({
   onItemClick,
   onInfoClick,
   onManageSpells,
+  onAmbush,
 }) {
   const { currentUser, updatePlayerStats } = useMultiplayerGame();
 
@@ -254,7 +275,6 @@ export function HeroStatusCard({
   const [selectedWoundType, setSelectedWoundType] = useState(null);
   const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
-  const [hideMyGold, setHideMyGold] = useState(true);
 
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
@@ -310,7 +330,7 @@ export function HeroStatusCard({
 
   const handleGoldToggle = (e) => {
     e.stopPropagation();
-    setHideMyGold((prev) => !prev);
+    updatePlayerStats(player.id, { isGoldHidden: !player.isGoldHidden });
   };
 
   const handleWoundTypeSelect = (woundType) => {
@@ -426,8 +446,7 @@ export function HeroStatusCard({
             <GoldDisplay
               player={player}
               isCurrentUser={isCurrentUser}
-              hideMyGold={hideMyGold}
-              onToggle={handleGoldToggle}
+              onToggleGoldVisibility={handleGoldToggle}
             />
           </div>
 
@@ -467,6 +486,7 @@ export function HeroStatusCard({
             onManageSpells={onManageSpells}
             onHeal={handleHeal}
             onSelfHeal={handleSelfHeal}
+            onAmbush={onAmbush}
           />
         </CardContent>
       </Card>

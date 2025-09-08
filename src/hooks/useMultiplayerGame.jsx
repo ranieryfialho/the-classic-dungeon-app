@@ -399,6 +399,35 @@ export function MultiplayerProvider({ children }) {
     },
     [runPlayerUpdateTransaction]
   );
+
+  const stealItemFromPlayer = useCallback((thiefId, targetId, item, itemIndex) => {
+    runPlayerUpdateTransaction((players) =>
+      players.map((p) => {
+        if (p.id === thiefId) {
+          return { ...p, inventory: [...(p.inventory || []), item] };
+        }
+        if (p.id === targetId) {
+          return { ...p, inventory: p.inventory.filter((_, i) => i !== itemIndex) };
+        }
+        return p;
+      })
+    );
+  }, [runPlayerUpdateTransaction]);
+
+  const stealGoldFromPlayer = useCallback((thiefId, targetId, amount) => {
+    runPlayerUpdateTransaction((players) =>
+      players.map((p) => {
+        if (p.id === thiefId) {
+          return { ...p, gold: (p.gold || 0) + amount };
+        }
+        if (p.id === targetId) {
+          return { ...p, gold: Math.max(0, (p.gold || 0) - amount) };
+        }
+        return p;
+      })
+    );
+  }, [runPlayerUpdateTransaction]);
+
   const proposeEndGame = useCallback(
     () =>
       updateRoomData({
@@ -446,6 +475,8 @@ export function MultiplayerProvider({ children }) {
       removePlayer,
       setPlayerSpells,
       toggleSpellState,
+      stealItemFromPlayer,
+      stealGoldFromPlayer,
     }),
     [
       gameState,
@@ -468,6 +499,8 @@ export function MultiplayerProvider({ children }) {
       removePlayer,
       setPlayerSpells,
       toggleSpellState,
+      stealItemFromPlayer,
+      stealGoldFromPlayer,
     ]
   );
 

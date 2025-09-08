@@ -9,9 +9,17 @@ import { WoundRulesModal } from "@/components/game/WoundRulesModal";
 import { CharacterInfoModal } from "@/components/game/CharacterInfoModal";
 import { SpellbookModal } from "@/components/game/SpellbookModal";
 import { characterClasses } from "@/config/characterClasses";
+import { AmbushModal } from "@/components/game/AmbushModal";
 
 export function GameDashboard() {
-  const { gameState, currentUser, proposeEndGame, setPlayerSpells } = useMultiplayerGame();
+  const { 
+    gameState, 
+    currentUser, 
+    proposeEndGame, 
+    setPlayerSpells,
+    stealGoldFromPlayer,
+    stealItemFromPlayer 
+  } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
 
   const [editingPlayerId, setEditingPlayerId] = useState(null);
@@ -20,6 +28,7 @@ export function GameDashboard() {
   const [showWoundRules, setShowWoundRules] = useState(false);
   const [showingInfoForPlayer, setShowingInfoForPlayer] = useState(null);
   const [editingSpellsForPlayer, setEditingSpellsForPlayer] = useState(null);
+  const [ambushTarget, setAmbushTarget] = useState(null);
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -29,6 +38,10 @@ export function GameDashboard() {
 
   const handleItemClick = (item) => {
     setShowingItem(item);
+  };
+  
+  const handleAmbushClick = (targetPlayer) => {
+    setAmbushTarget(targetPlayer);
   };
 
   const handleProposeEndGame = () => {
@@ -76,6 +89,7 @@ export function GameDashboard() {
                   onItemClick={handleItemClick}
                   onInfoClick={() => setShowingInfoForPlayer(player)}
                   onManageSpells={() => setEditingSpellsForPlayer(player)}
+                  onAmbush={handleAmbushClick}
                 />
               ))}
             </div>
@@ -104,6 +118,15 @@ export function GameDashboard() {
         isOpen={!!editingSpellsForPlayer}
         onClose={() => setEditingSpellsForPlayer(null)}
         onSave={setPlayerSpells}
+      />
+      
+      <AmbushModal
+        isOpen={!!ambushTarget}
+        onClose={() => setAmbushTarget(null)}
+        thief={currentUser}
+        target={ambushTarget}
+        onStealGold={stealGoldFromPlayer}
+        onStealItem={stealItemFromPlayer}
       />
     </>
   );
