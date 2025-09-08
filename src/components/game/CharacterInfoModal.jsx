@@ -28,7 +28,7 @@ export function CharacterInfoModal({ player, isOpen, onClose }) {
             <p className="text-lg text-stone-light mt-1">({player.character.name})</p>
             <div className="flex gap-6 mt-4 text-stone-light">
                 <div className="text-center">
-                    <p className="text-xs">OURO</p>
+                    <p className="text-xs">META DE OURO</p>
                     <p className="font-bold text-lg text-treasure-gold">{classData.goldTarget.toLocaleString('pt-BR')}</p>
                 </div>
                 <div className="text-center">

@@ -37,14 +37,11 @@ export function HeroStatusCard({
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
   );
-  const goldTarget = classData ? classData.goldTarget : 0;
 
   const canHeal =
     currentUser?.character?.className === "Paladino" &&
     player.isWounded &&
     !isCurrentUser;
-
-  const shouldShowTarget = isCurrentUser;
 
   const handleHeal = (e) => {
     e.stopPropagation();
@@ -317,7 +314,7 @@ export function HeroStatusCard({
           <div className="space-y-2 sm:space-y-4">
             <div>
               <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span> Ouro {shouldShowTarget && `(Meta: ${goldTarget.toLocaleString("pt-BR")})`} </span>
+                <span>Meu Ouro</span>
                 {isCurrentUser && (
                   <button
                     className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
@@ -372,7 +369,7 @@ export function HeroStatusCard({
               className="w-full mt-3 sm:mt-4 bg-void-purple/80 hover:bg-void-purple text-white font-bold text-xs sm:text-sm"
             >
               <ScrollText className="mr-2 h-4 w-4" />
-              Ver Vantagens
+              Mais Detalhes
             </Button>
           )}
           
