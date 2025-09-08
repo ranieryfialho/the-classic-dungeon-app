@@ -10,6 +10,7 @@ import { CharacterInfoModal } from "@/components/game/CharacterInfoModal";
 import { SpellbookModal } from "@/components/game/SpellbookModal";
 import { characterClasses } from "@/config/characterClasses";
 import { AmbushModal } from "@/components/game/AmbushModal";
+import { DwarfAbilityModal } from "@/components/game/DwarfAbilityModal";
 
 export function GameDashboard() {
   const { 
@@ -18,7 +19,8 @@ export function GameDashboard() {
     proposeEndGame, 
     setPlayerSpells,
     stealGoldFromPlayer,
-    stealItemFromPlayer 
+    stealItemFromPlayer,
+    addGoldBonus 
   } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
 
@@ -29,6 +31,7 @@ export function GameDashboard() {
   const [showingInfoForPlayer, setShowingInfoForPlayer] = useState(null);
   const [editingSpellsForPlayer, setEditingSpellsForPlayer] = useState(null);
   const [ambushTarget, setAmbushTarget] = useState(null);
+  const [isDwarfModalOpen, setIsDwarfModalOpen] = useState(false);
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -42,6 +45,10 @@ export function GameDashboard() {
   
   const handleAmbushClick = (targetPlayer) => {
     setAmbushTarget(targetPlayer);
+  };
+  
+  const handleDwarfAbilityConfirm = () => {
+    addGoldBonus(currentUser.id, 1000);
   };
 
   const handleProposeEndGame = () => {
@@ -90,6 +97,7 @@ export function GameDashboard() {
                   onInfoClick={() => setShowingInfoForPlayer(player)}
                   onManageSpells={() => setEditingSpellsForPlayer(player)}
                   onAmbush={handleAmbushClick}
+                  onOpenDwarfModal={() => setIsDwarfModalOpen(true)}
                 />
               ))}
             </div>
@@ -127,6 +135,12 @@ export function GameDashboard() {
         target={ambushTarget}
         onStealGold={stealGoldFromPlayer}
         onStealItem={stealItemFromPlayer}
+      />
+
+      <DwarfAbilityModal
+        isOpen={isDwarfModalOpen}
+        onClose={() => setIsDwarfModalOpen(false)}
+        onConfirm={handleDwarfAbilityConfirm}
       />
     </>
   );

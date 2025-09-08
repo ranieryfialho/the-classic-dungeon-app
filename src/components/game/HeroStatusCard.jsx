@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMultiplayerGame } from "@/hooks/useMultiplayerGame";
 import { characterClasses } from "@/config/characterClasses";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollText, Wand2, Swords } from "lucide-react";
+import { ScrollText, Wand2, Swords, Axe } from "lucide-react";
 
 // --- SUB-COMPONENTES PARA ORGANIZAÇÃO ---
 
@@ -64,35 +64,29 @@ const CardStatusBadge = ({ player, isCurrentUser, onClick }) => {
 };
 
 const GoldDisplay = ({ player, isCurrentUser, onToggleGoldVisibility }) => {
-  // CORREÇÃO APLICADA AQUI:
-  // O ouro só deve ser visível se for o card do próprio jogador (isCurrentUser).
-  // Para todos os outros, o valor será "???".
-  const shouldShowGold = isCurrentUser;
+    const shouldShowGold = isCurrentUser;
 
-  return (
-    <div>
-      <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-        <span>Ouro</span>
-        {isCurrentUser && (
-          <button
-            className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
-            onClick={onToggleGoldVisibility}
-            title={
-              player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"
-            }
-          >
-            {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
-          </button>
-        )}
-      </span>
-      <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-        {shouldShowGold && !player.isGoldHidden
-          ? player.gold.toLocaleString("pt-BR")
-          : "???"}
-      </p>
-    </div>
-  );
+    return (
+        <div>
+            <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
+                <span>Ouro</span>
+                {isCurrentUser && (
+                    <button
+                        className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
+                        onClick={onToggleGoldVisibility}
+                        title={player.isGoldHidden ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
+                    >
+                        {player.isGoldHidden ? "👁️" : "👁️‍🗨️"}
+                    </button>
+                )}
+            </span>
+            <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
+                {shouldShowGold && !player.isGoldHidden ? player.gold.toLocaleString("pt-BR") : "???"}
+            </p>
+        </div>
+    );
 };
+
 
 const SpellDisplay = ({ player, isCurrentUser }) => {
   const { toggleSpellState } = useMultiplayerGame();
@@ -143,6 +137,7 @@ const ActionButtons = ({
   onHeal,
   onSelfHeal,
   onAmbush,
+  onOpenDwarfModal,
 }) => {
   const { setPlayerSpells } = useMultiplayerGame();
   const isCurrentUser = player.id === currentUser?.id;
@@ -188,24 +183,13 @@ const ActionButtons = ({
     !isCurrentUser &&
     isWoundedState &&
     currentUser?.character?.className === "Paladino";
-
-  const isThief = currentUser?.character?.className === "Ladrão";
+  
+  const isThief = currentUser?.character?.className === 'Ladrão';
   const canAmbush = isThief && !isCurrentUser;
+  const isDwarf = player.character.className === 'Anão' && isCurrentUser;
 
   return (
     <>
-      {canAmbush && (
-        <Button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAmbush(player);
-          }}
-          className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
-        >
-          <Swords className="mr-2 h-4 w-4" /> Emboscar {player.character.name}
-        </Button>
-      )}
-
       {isCurrentUser && (
         <Button
           onClick={(e) => {
@@ -215,6 +199,30 @@ const ActionButtons = ({
           className="w-full mt-3 sm:mt-4 bg-void-purple/80 hover:bg-void-purple text-white font-bold text-xs sm:text-sm"
         >
           <ScrollText className="mr-2 h-4 w-4" /> Mais Detalhes
+        </Button>
+      )}
+
+      {isDwarf && (
+         <Button
+            onClick={(e) => {
+                e.stopPropagation();
+                onOpenDwarfModal();
+            }}
+            className="w-full bg-orange-700 hover:bg-orange-600 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+            >
+            <Axe className="mr-2 h-4 w-4" /> Mestre do Machado
+        </Button>
+      )}
+
+      {canAmbush && (
+        <Button
+          onClick={(e) => {
+            e.stopPropagation();
+            onAmbush(player);
+          }}
+          className="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold mt-3 sm:mt-4 text-xs sm:text-sm"
+        >
+          <Swords className="mr-2 h-4 w-4" /> Emboscar {player.character.name}
         </Button>
       )}
 
@@ -267,9 +275,10 @@ export function HeroStatusCard({
   onInfoClick,
   onManageSpells,
   onAmbush,
+  onOpenDwarfModal,
 }) {
   const { currentUser, updatePlayerStats } = useMultiplayerGame();
-
+  
   const [showWoundModal, setShowWoundModal] = useState(false);
   const [showItemSelection, setShowItemSelection] = useState(false);
   const [selectedWoundType, setSelectedWoundType] = useState(null);
@@ -487,6 +496,7 @@ export function HeroStatusCard({
             onHeal={handleHeal}
             onSelfHeal={handleSelfHeal}
             onAmbush={onAmbush}
+            onOpenDwarfModal={onOpenDwarfModal}
           />
         </CardContent>
       </Card>

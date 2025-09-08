@@ -427,6 +427,17 @@ export function MultiplayerProvider({ children }) {
       })
     );
   }, [runPlayerUpdateTransaction]);
+  
+  const addGoldBonus = useCallback((playerId, amount) => {
+    runPlayerUpdateTransaction((players) =>
+      players.map((p) => {
+        if (p.id === playerId) {
+          return { ...p, gold: (p.gold || 0) + amount };
+        }
+        return p;
+      })
+    );
+  }, [runPlayerUpdateTransaction]);
 
   const proposeEndGame = useCallback(
     () =>
@@ -477,6 +488,7 @@ export function MultiplayerProvider({ children }) {
       toggleSpellState,
       stealItemFromPlayer,
       stealGoldFromPlayer,
+      addGoldBonus,
     }),
     [
       gameState,
@@ -501,6 +513,7 @@ export function MultiplayerProvider({ children }) {
       toggleSpellState,
       stealItemFromPlayer,
       stealGoldFromPlayer,
+      addGoldBonus,
     ]
   );
 
