@@ -32,7 +32,7 @@ export function HeroStatusCard({
   const [selectedWoundType, setSelectedWoundType] = useState(null);
   const [itemsToDiscard, setItemsToDiscard] = useState([]);
   const [goldToRemove, setGoldToRemove] = useState(0);
-  const [hideMyGold, setHideMyGold] = useState(false);
+  const [hideMyGold, setHideMyGold] = useState(true); // Ouro começa escondido por padrão
 
   const classData = characterClasses.find(
     (c) => c.name === player.character.className
@@ -42,6 +42,9 @@ export function HeroStatusCard({
     currentUser?.character?.className === "Paladino" &&
     player.isWounded &&
     !isCurrentUser;
+
+  // Lógica corrigida para mostrar/esconder o ouro
+  const shouldShowGold = isCurrentUser ? !hideMyGold : false;
 
   const handleHeal = (e) => {
     e.stopPropagation();
@@ -314,19 +317,19 @@ export function HeroStatusCard({
           <div className="space-y-2 sm:space-y-4">
             <div>
               <span className="text-xs sm:text-sm text-stone-light flex items-center gap-2 flex-wrap">
-                <span>Meu Ouro</span>
+                <span>Ouro</span>
                 {isCurrentUser && (
                   <button
                     className="cursor-pointer text-lg sm:text-xl hover:scale-110 transition-transform flex-shrink-0"
                     onClick={handleGoldToggle}
-                    title={hideMyGold ? "Mostrar Meu Ouro" : "Esconder Meu Ouro"}
+                    title={hideMyGold ? "Esconder Meu Ouro" : "Mostrar Meu Ouro"}
                   >
                     {hideMyGold ? "👁️‍🗨️" : "👁️"}
                   </button>
                 )}
               </span>
               <p className="text-xl sm:text-3xl font-bold text-treasure-gold gold-amount">
-                  {isCurrentUser && hideMyGold ? "???" : player.gold.toLocaleString("pt-BR")}
+                  {shouldShowGold ? player.gold.toLocaleString("pt-BR") : "???"}
               </p>
             </div>
           </div>
