@@ -323,20 +323,18 @@ export function HeroStatusCard({
   const handleWoundClick = (e) => {
     e.stopPropagation();
     if (isCurrentUser) {
-      if (player.skipTurn) {
-        updatePlayerStats(player.id, { skipTurn: false });
-        return;
-      }
       if (player.isDead) return;
+
+      // Lógica para limpar ferimentos (exceto "Pular Turno")
       if (isWoundedState) {
         updatePlayerStats(player.id, {
           isWounded: false,
           woundType: null,
-          skipTurn: false,
         });
       } else if (player.isStunned) {
         updatePlayerStats(player.id, { isStunned: false });
       } else {
+        // Se não tiver nenhum status para limpar, abre o modal para adicionar um
         setShowWoundModal(true);
       }
     }

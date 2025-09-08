@@ -36,13 +36,12 @@ export function TurnOrderModal() {
             if (rollB !== rollA) {
               return rollB - rollA;
             }
-            // Em caso de empate, a ordem de entrada na sala decide
             return new Date(a.joinedAt) - new Date(b.joinedAt);
           })
           .map(p => p.id);
         
         finalizeTurnOrder(sortedPlayerIds);
-      }, 3000); // Aguarda 3 segundos para todos verem os resultados
+      }, 3000);
     }
   }, [allPlayersRolled, currentUser, isResolving, playerList, turnRolls, finalizeTurnOrder]);
   

@@ -159,10 +159,10 @@ export function MultiplayerProvider({ children }) {
               isWounded: false,
               inventory: [],
               isGoldHidden: true,
-              woundType: null, // grave, leve
+              woundType: null,
               skipTurn: false,
               isDead: false,
-              spells: [], // Adicionado para o Mago
+              spells: [],
             });
             transaction.update(roomRef, { players: playersList });
           }
@@ -208,7 +208,7 @@ export function MultiplayerProvider({ children }) {
       woundType: null,
       skipTurn: false,
       isDead: false,
-      spells: [], // Adicionado para o Mago
+      spells: [],
     };
     await setDoc(doc(db, "rooms", roomId), {
       id: roomId,
@@ -244,17 +244,21 @@ export function MultiplayerProvider({ children }) {
   }, [authUser, gameState.room?.id, attemptAutoReconnect]);
 
   useEffect(() => {
-    const roomId = gameState.room?.id;
-    if (authUser && roomId) {
-      setupRealtimeListener(roomId);
-    }
-    return () => {
-      if (unsubscribeRoomRef.current) {
-        unsubscribeRoomRef.current();
-        unsubscribeRoomRef.current = null;
+    const { room, players } = gameState;
+    const me = authUser ? players[authUser.uid] : null;
+
+    if (!me || !room || !room.currentTurnPlayerId) return;
+
+    if (me.isHost && me.id === room.currentTurnPlayerId) {
+      const currentPlayer = players[room.currentTurnPlayerId];
+      if (currentPlayer && currentPlayer.skipTurn) {
+        setTimeout(() => {
+          passTurn();
+        }, 1500); 
       }
-    };
-  }, [authUser, gameState.room?.id, setupRealtimeListener]);
+    }
+  }, [gameState.room?.currentTurnPlayerId, authUser, gameState.players]);
+
 
   const updateRoomData = useCallback(
     (updates) => {
@@ -407,25 +411,21 @@ export function MultiplayerProvider({ children }) {
     if (!room || !room.currentTurnPlayerId || !room.turnOrder || room.turnOrder.length === 0) return;
   
     const currentTurnPlayer = players[room.currentTurnPlayerId];
-  
+
     if (currentTurnPlayer && currentTurnPlayer.skipTurn) {
-      await updatePlayerStats(currentTurnPlayer.id, { skipTurn: false });
+        await updatePlayerStats(currentTurnPlayer.id, { skipTurn: false });
     }
   
-    const roomRef = doc(db, "rooms", room.id);
-    const roomSnap = await getDoc(roomRef);
-    const latestRoomData = roomSnap.data();
-    const latestPlayersData = (latestRoomData.players || []).reduce((acc, p) => ({ ...acc, [p.id]: p }), {});
-    const currentTurnOrder = latestRoomData.turnOrder || [];
-    const currentPlayerId = latestRoomData.currentTurnPlayerId;
+    const currentTurnOrder = room.turnOrder;
+    const currentPlayerId = room.currentTurnPlayerId;
   
     let nextPlayerIndex = (currentTurnOrder.indexOf(currentPlayerId) + 1) % currentTurnOrder.length;
-    let nextPlayer = latestPlayersData[currentTurnOrder[nextPlayerIndex]];
-  
+    let nextPlayer = players[currentTurnOrder[nextPlayerIndex]];
+
     let attempts = 0;
     while(nextPlayer && nextPlayer.isDead && attempts < currentTurnOrder.length) {
       nextPlayerIndex = (nextPlayerIndex + 1) % currentTurnOrder.length;
-      nextPlayer = latestPlayersData[currentTurnOrder[nextPlayerIndex]];
+      nextPlayer = players[currentTurnOrder[nextPlayerIndex]];
       attempts++;
     }
   
@@ -536,11 +536,9 @@ export function MultiplayerProvider({ children }) {
   );
 
   const endGameAndSaveHistory = useCallback(async () => {
-    // ... Lógica de fim de jogo
   }, [gameState, saveRoomId]);
 
   const processEndGameVotes = useCallback(async () => {
-    // ... Lógica de votação
   }, [gameState, authUser, updateRoomData, endGameAndSaveHistory]);
 
   const value = useMemo(

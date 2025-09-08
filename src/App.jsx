@@ -8,7 +8,7 @@ import { CharacterSelection } from './pages/CharacterSelection';
 import { GameDashboard } from './pages/GameDashboard';
 import { PlayerProfile } from './pages/PlayerProfile';
 import { JoinRoom } from './pages/JoinRoom';
-import { TurnOrderModal } from './pages/TurnOrderModal'; // Nova importação
+import { TurnOrderModal } from './pages/TurnOrderModal';
 import Meteors from "@/components/magicui/meteors";
 import Sparkles from "@/components/magicui/sparkles";
 import Footer from "@/components/Footer";
@@ -34,7 +34,7 @@ function App() {
     switch (gameState.gamePhase) {
       case 'lobby': return <RoomLobby />;
       case 'selection': return <CharacterSelection />;
-      case 'rollingForTurn': return <TurnOrderModal />; // Nova fase
+      case 'rollingForTurn': return <TurnOrderModal />;
       case 'playing': return <GameDashboard />;
       case 'profile': return <PlayerProfile />;
       case 'joining': return <JoinRoom />;
