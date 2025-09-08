@@ -7,10 +7,11 @@ import { ItemDetailsModal } from "@/components/game/ItemDetailsModal";
 import { EndGameModal } from "@/components/game/EndGameModal";
 import { WoundRulesModal } from "@/components/game/WoundRulesModal";
 import { CharacterInfoModal } from "@/components/game/CharacterInfoModal";
+import { SpellbookModal } from "@/components/game/SpellbookModal";
 import { characterClasses } from "@/config/characterClasses";
 
 export function GameDashboard() {
-  const { gameState, currentUser, proposeEndGame } = useMultiplayerGame();
+  const { gameState, currentUser, proposeEndGame, setPlayerSpells } = useMultiplayerGame();
   const playerList = Object.values(gameState.players);
 
   const [editingPlayerId, setEditingPlayerId] = useState(null);
@@ -18,6 +19,7 @@ export function GameDashboard() {
   const [showingItem, setShowingItem] = useState(null);
   const [showWoundRules, setShowWoundRules] = useState(false);
   const [showingInfoForPlayer, setShowingInfoForPlayer] = useState(null);
+  const [editingSpellsForPlayer, setEditingSpellsForPlayer] = useState(null);
 
   const handleCardClick = (player) => {
     if (player.id === currentUser.id) {
@@ -73,6 +75,7 @@ export function GameDashboard() {
                   onClick={() => handleCardClick(player)} 
                   onItemClick={handleItemClick}
                   onInfoClick={() => setShowingInfoForPlayer(player)}
+                  onManageSpells={() => setEditingSpellsForPlayer(player)}
                 />
               ))}
             </div>
@@ -94,6 +97,13 @@ export function GameDashboard() {
         player={showingInfoForPlayer} 
         isOpen={!!showingInfoForPlayer} 
         onClose={() => setShowingInfoForPlayer(null)}
+      />
+
+      <SpellbookModal 
+        player={editingSpellsForPlayer}
+        isOpen={!!editingSpellsForPlayer}
+        onClose={() => setEditingSpellsForPlayer(null)}
+        onSave={setPlayerSpells}
       />
     </>
   );

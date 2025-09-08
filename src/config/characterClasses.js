@@ -52,7 +52,7 @@ export const characterClasses = [
       description: 'Robusto e resistente, mas lento.',
       icon: '🔨',
       color: 'text-sky-400',
-      heroes: ['Gimli'], // Apenas um herói
+      heroes: ['Gimli'],
       goldTarget: 20000,
       movement: 4,
       gifUrl: './assets/characters/anao.gif',

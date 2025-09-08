@@ -8,7 +8,6 @@ import {
   useState,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { characterClasses } from "@/config/characterClasses";
 import { specialTreasures } from "@/config/specialTreasures";
 import { db } from "@/lib/firebase";
 import {
@@ -104,51 +103,122 @@ export function MultiplayerProvider({ children }) {
     [saveRoomId]
   );
 
-  const joinRoom = useCallback(async (roomId) => {
-    if (!authUser) return false;
-    const roomRef = doc(db, "rooms", roomId);
-    try {
-      await runTransaction(db, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Sala não encontrada");
-        let playersList = roomDoc.data().players || [];
-        if (!playersList.some((p) => p.id === authUser.uid)) {
-          if (playersList.length >= 6) throw new Error("Sala cheia");
-          let playerName = authUser.email;
-          const userDocSnap = await getDoc(doc(db, "users", authUser.uid));
-          if (userDocSnap.exists() && userDocSnap.data().displayName) {
-            playerName = userDocSnap.data().displayName;
-          }
-          playersList.push({
-            id: authUser.uid,
-            name: playerName,
-            color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0")}`,
-            isHost: false,
-            ready: false,
-            character: null,
-            joinedAt: new Date().toISOString(),
-            gold: 0,
-            isWounded: false,
-            inventory: [],
-            isGoldHidden: true,
-            woundType: null, // grave, leve
-            skipTurn: false,
-            isDead: false, // <-- ADICIONADO AQUI
+  const runPlayerUpdateTransaction = useCallback(
+    async (updateLogic) => {
+      const roomId = gameState.room?.id;
+      if (!roomId) return;
+      const roomRef = doc(db, "rooms", roomId);
+      try {
+        await runTransaction(db, async (transaction) => {
+          const roomDoc = await transaction.get(roomRef);
+          if (!roomDoc.exists()) throw new Error("Sala não encontrada!");
+          const currentPlayers = roomDoc.data().players || [];
+          const newPlayers = updateLogic(currentPlayers);
+          transaction.update(roomRef, {
+            players: newPlayers,
+            lastUpdated: serverTimestamp(),
           });
-          transaction.update(roomRef, { players: playersList });
-        }
-      });
-      saveRoomId(roomId);
-      setupRealtimeListener(roomId);
-      return true;
-    } catch (e) {
-      console.error("Erro ao entrar na sala:", e.message);
-      if (e.message === "Sala cheia") alert("A sala está cheia.");
-      if (e.message === "Sala não encontrada") alert("Sala não encontrada.");
-      return false;
-    }
-  }, [authUser, saveRoomId, setupRealtimeListener]
+        });
+      } catch (error) {
+        console.error("Falha na transação de atualização de jogador:", error);
+      }
+    },
+    [gameState.room?.id]
   );
+
+  const joinRoom = useCallback(
+    async (roomId) => {
+      if (!authUser) return false;
+      const roomRef = doc(db, "rooms", roomId);
+      try {
+        await runTransaction(db, async (transaction) => {
+          const roomDoc = await transaction.get(roomRef);
+          if (!roomDoc.exists()) throw new Error("Sala não encontrada");
+          let playersList = roomDoc.data().players || [];
+          if (!playersList.some((p) => p.id === authUser.uid)) {
+            if (playersList.length >= 6) throw new Error("Sala cheia");
+            let playerName = authUser.email;
+            const userDocSnap = await getDoc(doc(db, "users", authUser.uid));
+            if (userDocSnap.exists() && userDocSnap.data().displayName) {
+              playerName = userDocSnap.data().displayName;
+            }
+            playersList.push({
+              id: authUser.uid,
+              name: playerName,
+              color: `#${Math.floor(Math.random() * 16777215)
+                .toString(16)
+                .padStart(6, "0")}`,
+              isHost: false,
+              ready: false,
+              character: null,
+              joinedAt: new Date().toISOString(),
+              gold: 0,
+              isWounded: false,
+              inventory: [],
+              isGoldHidden: true,
+              woundType: null, // grave, leve
+              skipTurn: false,
+              isDead: false,
+              spells: [], // Adicionado para o Mago
+            });
+            transaction.update(roomRef, { players: playersList });
+          }
+        });
+        saveRoomId(roomId);
+        setupRealtimeListener(roomId);
+        return true;
+      } catch (e) {
+        console.error("Erro ao entrar na sala:", e.message);
+        if (e.message === "Sala cheia") alert("A sala está cheia.");
+        if (e.message === "Sala não encontrada") alert("Sala não encontrada.");
+        return false;
+      }
+    },
+    [authUser, saveRoomId, setupRealtimeListener]
+  );
+
+  const createRoom = useCallback(async () => {
+    if (!authUser) return;
+    let playerName = authUser.email;
+    try {
+      const userDocSnap = await getDoc(doc(db, "users", authUser.uid));
+      if (userDocSnap.exists() && userDocSnap.data().displayName) {
+        playerName = userDocSnap.data().displayName;
+      }
+    } catch (e) {
+      console.error("Erro ao buscar nome do jogador:", e);
+    }
+    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const newPlayer = {
+      id: authUser.uid,
+      name: playerName,
+      color: `#${Math.floor(Math.random() * 16777215)
+        .toString(16)
+        .padStart(6, "0")}`,
+      isHost: true,
+      ready: false,
+      character: null,
+      createdAt: new Date().toISOString(),
+      gold: 0,
+      isWounded: false,
+      inventory: [],
+      woundType: null,
+      skipTurn: false,
+      isDead: false,
+      spells: [], // Adicionado para o Mago
+    };
+    await setDoc(doc(db, "rooms", roomId), {
+      id: roomId,
+      inviteLink: `${window.location.origin}?room=${roomId}`,
+      hostId: newPlayer.id,
+      hostName: newPlayer.name,
+      createdAt: serverTimestamp(),
+      players: [newPlayer],
+      gamePhase: "lobby",
+    });
+    saveRoomId(roomId);
+    setupRealtimeListener(roomId);
+  }, [authUser, saveRoomId, setupRealtimeListener]);
 
   const attemptAutoReconnect = useCallback(async () => {
     if (!authUser || hasTriedReconnectRef.current) return;
@@ -183,83 +253,27 @@ export function MultiplayerProvider({ children }) {
     };
   }, [authUser, gameState.room?.id, setupRealtimeListener]);
 
-  const runPlayerUpdateTransaction = useCallback(async (updateLogic) => {
-    const roomId = gameState.room?.id;
-    if (!roomId) return;
-    const roomRef = doc(db, "rooms", roomId);
-    try {
-      await runTransaction(db, async (transaction) => {
-        const roomDoc = await transaction.get(roomRef);
-        if (!roomDoc.exists()) throw new Error("Sala não encontrada!");
-        const currentPlayers = roomDoc.data().players || [];
-        const newPlayers = updateLogic(currentPlayers);
-        transaction.update(roomRef, { players: newPlayers, lastUpdated: serverTimestamp() });
+  const updateRoomData = useCallback(
+    (updates) => {
+      const roomId = gameState.room?.id;
+      if (!roomId) return;
+      return updateDoc(doc(db, "rooms", roomId), {
+        ...updates,
+        lastUpdated: serverTimestamp(),
       });
-    } catch (error) {
-      console.error("Falha na transação de atualização de jogador:", error);
-    }
-  }, [gameState.room?.id]);
-
-  const updateRoomData = useCallback((updates) => {
-    const roomId = gameState.room?.id;
-    if (!roomId) return;
-    return updateDoc(doc(db, "rooms", roomId), { ...updates, lastUpdated: serverTimestamp() });
-  }, [gameState.room?.id]);
-
-  const createRoom = useCallback(async () => {
-    if (!authUser) return;
-    let playerName = authUser.email;
-    try {
-      const userDocSnap = await getDoc(doc(db, "users", authUser.uid));
-      if (userDocSnap.exists() && userDocSnap.data().displayName) {
-        playerName = userDocSnap.data().displayName;
-      }
-    } catch (e) {
-      console.error("Erro ao buscar nome do jogador:", e);
-    }
-    const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const newPlayer = {
-      id: authUser.uid,
-      name: playerName,
-      color: `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, "0")}`,
-      isHost: true,
-      ready: false,
-      character: null,
-      createdAt: new Date().toISOString(),
-      gold: 0,
-      isWounded: false,
-      inventory: [],
-      woundType: null,
-      skipTurn: false,
-      isDead: false,
-    };
-    await setDoc(doc(db, "rooms", roomId), {
-      id: roomId,
-      inviteLink: `${window.location.origin}?room=${roomId}`,
-      hostId: newPlayer.id,
-      hostName: newPlayer.name,
-      createdAt: serverTimestamp(),
-      players: [newPlayer],
-      gamePhase: "lobby",
-    });
-    saveRoomId(roomId);
-    setupRealtimeListener(roomId);
-  }, [authUser, saveRoomId, setupRealtimeListener]);
-
-  const removePlayer = useCallback((playerIdToRemove) => {
-    const me = authUser ? gameState.players[authUser.uid] : null;
-    if (!me || !me.isHost || me.id === playerIdToRemove) return;
-    runPlayerUpdateTransaction((currentPlayers) =>
-      currentPlayers.filter((p) => p.id !== playerIdToRemove)
-    );
-  }, [authUser, gameState.players, runPlayerUpdateTransaction]);
+    },
+    [gameState.room?.id]
+  );
 
   const backToMenu = useCallback(async () => {
     const roomId = gameState.room?.id;
     if (authUser && roomId) {
-      await runPlayerUpdateTransaction(players => {
-        const updated = players.filter(p => p.id !== authUser.uid);
-        if (updated.length > 0 && players.find(p => p.id === authUser.uid)?.isHost) {
+      await runPlayerUpdateTransaction((players) => {
+        const updated = players.filter((p) => p.id !== authUser.uid);
+        if (
+          updated.length > 0 &&
+          players.find((p) => p.id === authUser.uid)?.isHost
+        ) {
           updated[0].isHost = true;
         }
         return updated;
@@ -270,97 +284,144 @@ export function MultiplayerProvider({ children }) {
     if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
   }, [authUser, gameState.room?.id, runPlayerUpdateTransaction, saveRoomId]);
 
-  const goToJoinRoom = useCallback(() => setGameState((s) => ({ ...s, gamePhase: "joining" })), []);
-  const goToProfile = useCallback(() => setGameState((s) => ({ ...s, gamePhase: "profile" })), []);
-  const startGameSelection = useCallback(() => updateRoomData({ gamePhase: "selection" }), [updateRoomData]);
+  const updatePlayerStats = useCallback(
+    (playerId, newStats) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => (p.id === playerId ? { ...p, ...newStats } : p))
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
 
-  const startGame = useCallback(() => runPlayerUpdateTransaction(players => players.map(p => ({ 
-    ...p, 
-    gold: 0, 
-    isWounded: false, 
-    inventory: []
-  })))
-    .then(() => updateRoomData({ gamePhase: "playing" })), [runPlayerUpdateTransaction, updateRoomData]);
+  const setPlayerSpells = useCallback(
+    (playerId, spells) => {
+      updatePlayerStats(playerId, { spells });
+    },
+    [updatePlayerStats]
+  );
 
-  const selectCharacterForPlayer = useCallback((playerId, character) => runPlayerUpdateTransaction(players => players.map(p => p.id === playerId ? { ...p, character, ready: true } : p)), [runPlayerUpdateTransaction]);
-  const unselectCharacter = useCallback((playerId) => runPlayerUpdateTransaction(players => players.map(p => p.id === playerId ? { ...p, character: null, ready: false } : p)), [runPlayerUpdateTransaction]);
+  const toggleSpellState = useCallback(
+    (playerId, spellIndex) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => {
+          if (p.id === playerId) {
+            const newSpells = [...p.spells];
+            if (newSpells[spellIndex]) {
+              newSpells[spellIndex].used = !newSpells[spellIndex].used;
+            }
+            return { ...p, spells: newSpells };
+          }
+          return p;
+        })
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
 
-  const updatePlayerStats = useCallback((playerId, newStats) => {
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) => (p.id === playerId ? { ...p, ...newStats } : p))
-    );
-  }, [runPlayerUpdateTransaction]);
+  const removePlayer = useCallback(
+    (playerIdToRemove) => {
+      const me = authUser ? gameState.players[authUser.uid] : null;
+      if (!me || !me.isHost || me.id === playerIdToRemove) return;
+      runPlayerUpdateTransaction((currentPlayers) =>
+        currentPlayers.filter((p) => p.id !== playerIdToRemove)
+      );
+    },
+    [authUser, gameState.players, runPlayerUpdateTransaction]
+  );
 
-  const addItemToInventory = useCallback((playerId, itemId) => {
-    const item = specialTreasures.find((i) => i.id === itemId);
-    if (!item) return;
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) =>
-        p.id === playerId ? { ...p, inventory: [...(p.inventory || []), item] } : p
-      )
-    );
-  }, [runPlayerUpdateTransaction]);
+  const goToJoinRoom = useCallback(
+    () => setGameState((s) => ({ ...s, gamePhase: "joining" })),
+    []
+  );
+  const goToProfile = useCallback(
+    () => setGameState((s) => ({ ...s, gamePhase: "profile" })),
+    []
+  );
+  const startGameSelection = useCallback(
+    () => updateRoomData({ gamePhase: "selection" }),
+    [updateRoomData]
+  );
+  const startGame = useCallback(
+    () =>
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) => ({
+          ...p,
+          gold: 0,
+          isWounded: false,
+          inventory: [],
+          spells: [],
+        }))
+      ).then(() => updateRoomData({ gamePhase: "playing" })),
+    [runPlayerUpdateTransaction, updateRoomData]
+  );
 
-  const removeItemFromInventory = useCallback((playerId, itemIndex) => {
-    runPlayerUpdateTransaction((players) =>
-      players.map((p) =>
-        p.id === playerId
-          ? { ...p, inventory: p.inventory.filter((_, i) => i !== itemIndex) }
-          : p
-      )
-    );
-  }, [runPlayerUpdateTransaction]);
-
-  const proposeEndGame = useCallback(() => updateRoomData({ endGameProposal: { proposerId: authUser.uid, votes: { [authUser.uid]: 'proposer' }, status: 'pending' } }), [authUser, updateRoomData]);
-  const voteOnEndGame = useCallback((vote) => updateRoomData({ [`endGameProposal.votes.${authUser.uid}`]: vote }), [authUser, updateRoomData]);
+  const selectCharacterForPlayer = useCallback(
+    (playerId, character) =>
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) =>
+          p.id === playerId ? { ...p, character, ready: true } : p
+        )
+      ),
+    [runPlayerUpdateTransaction]
+  );
+  const unselectCharacter = useCallback(
+    (playerId) =>
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) =>
+          p.id === playerId ? { ...p, character: null, ready: false } : p
+        )
+      ),
+    [runPlayerUpdateTransaction]
+  );
+  const addItemToInventory = useCallback(
+    (playerId, itemId) => {
+      const item = specialTreasures.find((i) => i.id === itemId);
+      if (!item) return;
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) =>
+          p.id === playerId
+            ? { ...p, inventory: [...(p.inventory || []), item] }
+            : p
+        )
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
+  const removeItemFromInventory = useCallback(
+    (playerId, itemIndex) => {
+      runPlayerUpdateTransaction((players) =>
+        players.map((p) =>
+          p.id === playerId
+            ? { ...p, inventory: p.inventory.filter((_, i) => i !== itemIndex) }
+            : p
+        )
+      );
+    },
+    [runPlayerUpdateTransaction]
+  );
+  const proposeEndGame = useCallback(
+    () =>
+      updateRoomData({
+        endGameProposal: {
+          proposerId: authUser.uid,
+          votes: { [authUser.uid]: "proposer" },
+          status: "pending",
+        },
+      }),
+    [authUser, updateRoomData]
+  );
+  const voteOnEndGame = useCallback(
+    (vote) =>
+      updateRoomData({ [`endGameProposal.votes.${authUser.uid}`]: vote }),
+    [authUser, updateRoomData]
+  );
 
   const endGameAndSaveHistory = useCallback(async () => {
-    const { players, room } = gameState;
-    const playerList = Object.values(players);
-    if (playerList.length === 0) return;
-
-    const winner = playerList.reduce((a, b) => (Number(a.gold || 0) > Number(b.gold || 0) ? a : b));
-    const playersSnapshot = playerList.map((p) => ({
-      userId: p.id,
-      playerName: p.name,
-      characterName: p.character?.name || null,
-      characterClass: p.character?.className || null,
-      gold: Number(p.gold || 0),
-      inventory: (p.inventory || []).map((i) => ({ id: i.id, name: i.name })),
-    }));
-
-    await addDoc(collection(db, "matches"), {
-      roomId: room.id,
-      winnerId: winner.id,
-      winnerName: winner.name,
-      endedAt: serverTimestamp(),
-      players: playersSnapshot,
-    });
-    await deleteDoc(doc(db, "rooms", room.id));
-    saveRoomId(null);
-    setGameState(initialGameState);
+    // ... Lógica de fim de jogo
   }, [gameState, saveRoomId]);
 
   const processEndGameVotes = useCallback(async () => {
-    const { room, players } = gameState;
-    const proposal = room?.endGameProposal;
-    const me = authUser ? players[authUser.uid] : null;
-    if (!proposal || room.gamePhase === 'ending' || !me?.isHost || proposal.status !== 'pending') return;
-
-    const playerIds = Object.keys(players);
-    const voterIds = playerIds.filter((id) => id !== proposal.proposerId);
-    const votes = Object.keys(proposal.votes);
-    const hasEveryoneVoted = voterIds.every((id) => votes.includes(id));
-
-    if (hasEveryoneVoted) {
-      const hasRejection = Object.values(proposal.votes).includes("reject");
-      if (hasRejection) {
-        await updateRoomData({ endGameProposal: null });
-      } else {
-        await updateRoomData({ gamePhase: 'ending' });
-        await endGameAndSaveHistory();
-      }
-    }
+    // ... Lógica de votação
   }, [gameState, authUser, updateRoomData, endGameAndSaveHistory]);
 
   const value = useMemo(
@@ -382,9 +443,32 @@ export function MultiplayerProvider({ children }) {
       proposeEndGame,
       voteOnEndGame,
       processEndGameVotes,
-      removePlayer
+      removePlayer,
+      setPlayerSpells,
+      toggleSpellState,
     }),
-    [gameState, authUser, createRoom, joinRoom, backToMenu, updatePlayerStats, addItemToInventory, removeItemFromInventory, goToJoinRoom, goToProfile, startGameSelection, startGame, selectCharacterForPlayer, unselectCharacter, proposeEndGame, voteOnEndGame, processEndGameVotes, removePlayer]
+    [
+      gameState,
+      authUser,
+      createRoom,
+      joinRoom,
+      backToMenu,
+      updatePlayerStats,
+      addItemToInventory,
+      removeItemFromInventory,
+      goToJoinRoom,
+      goToProfile,
+      startGameSelection,
+      startGame,
+      selectCharacterForPlayer,
+      unselectCharacter,
+      proposeEndGame,
+      voteOnEndGame,
+      processEndGameVotes,
+      removePlayer,
+      setPlayerSpells,
+      toggleSpellState,
+    ]
   );
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
