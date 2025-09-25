@@ -3,12 +3,12 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBnl4W66ejQKWbAaST2q7n5sLBd51FV62Y",
-  authDomain: "the-classic-dungeon.firebaseapp.com",
-  projectId: "the-classic-dungeon",
-  storageBucket: "the-classic-dungeon.firebasestorage.app",
-  messagingSenderId: "411626699353",
-  appId: "1:411626699353:web:25c211af06a1e177bdcf48"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 const app = initializeApp(firebaseConfig);
