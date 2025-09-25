@@ -1,12 +1,105 @@
-# React + Vite
+# The Classic Dungeon ⚔️
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![React][React-shield]][React-url]
+[![Vite][Vite-shield]][Vite-url]
+[![Firebase][Firebase-shield]][Firebase-url]
+[![TailwindCSS][Tailwind-shield]][Tailwind-url]
 
-Currently, two official plugins are available:
+Um jogo de tabuleiro multiplayer online com temática de fantasia, inspirado em clássicos como HeroQuest. Reúna seus amigos, escolha seu herói e aventure-se em masmorras em busca de tesouros e glória!
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+![Menu Principal do Jogo](https://i.imgur.com/gS4gV2N.png)
 
-## Expanding the ESLint configuration
+## 📜 Sobre o Projeto
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The Classic Dungeon é uma aplicação web que recria a experiência de um jogo de tabuleiro de masmorra em um ambiente digital e multiplayer. Os jogadores podem criar ou entrar em salas, selecionar uma classe de personagem com habilidades únicas e acompanhar o progresso de toda a equipe em tempo real. O projeto utiliza Firebase para gerenciar o estado do jogo e a autenticação dos usuários, garantindo uma experiência interativa e sincronizada.
+
+### ✨ Funcionalidades
+
+* **Autenticação de Usuários**: Sistema de login e cadastro para salvar o progresso dos jogadores.
+* **Lobby Multiplayer**: Crie salas de jogo privadas ou entre em salas existentes usando um código ou um link de convite.
+* **Seleção de Personagens**: Escolha entre 6 classes únicas (Guerreiro, Elfo, Anão, Feiticeiro, Paladino e Ladrão), cada одна com vantagens e habilidades especiais.
+* **Dashboard em Tempo Real**: Acompanhe o status, ouro, itens e magias de todos os jogadores da equipe durante a partida.
+* **Sistema de Turnos**: A ordem de jogo é definida aleatoriamente por rolagem de dados no início da partida.
+* **Interatividade**: Gerencie o inventário, ouro, status de combate (ferido, atordoado, etc.) e magias do seu personagem.
+* **Votação para Fim de Jogo**: Qualquer jogador que atingir sua meta de ouro pode propor o fim da partida, que é decidido por votação.
+
+## 🛠️ Tecnologias Utilizadas
+
+Este projeto foi construído com as seguintes tecnologias:
+
+* **Frontend**: [React][React-url]
+* **Build Tool**: [Vite][Vite-url]
+* **Backend & DB**: [Firebase][Firebase-url] (Firestore, Authentication)
+* **Estilização**: [Tailwind CSS][Tailwind-url]
+* **Componentes UI**: [Shadcn/UI][Shadcn-url]
+* **Ícones**: [Lucide React][Lucide-url]
+
+## 🚀 Começando
+
+Para rodar o projeto em sua máquina local, siga os passos abaixo.
+
+### Pré-requisitos
+
+* Node.js (versão 18 ou superior)
+* npm ou yarn
+
+### Instalação
+
+1.  **Clone o repositório:**
+    ```sh
+    git clone [https://github.com/ranieryfialho/the-classic-dungeon-app.git](https://github.com/ranieryfialho/the-classic-dungeon-app.git)
+    cd the-classic-dungeon-app
+    ```
+
+2.  **Instale as dependências:**
+    ```sh
+    npm install
+    ```
+
+3.  **Configure as variáveis de ambiente:**
+    * Crie um arquivo `.env` na raiz do projeto.
+    * Adicione suas credenciais do Firebase a este arquivo, prefixando cada chave com `VITE_`.
+        ```env
+        VITE_FIREBASE_API_KEY="SUA_API_KEY"
+        VITE_FIREBASE_AUTH_DOMAIN="SEU_AUTH_DOMAIN"
+        VITE_FIREBASE_PROJECT_ID="SEU_PROJECT_ID"
+        VITE_FIREBASE_STORAGE_BUCKET="SEU_STORAGE_BUCKET"
+        VITE_FIREBASE_MESSAGING_SENDER_ID="SEU_MESSAGING_SENDER_ID"
+        VITE_FIREBASE_APP_ID="SEU_APP_ID"
+        ```
+
+4.  **Rode o servidor de desenvolvimento:**
+    ```sh
+    npm run dev
+    ```
+
+    A aplicação estará disponível em `http://localhost:5173`.
+
+## 🤝 Contribuições
+
+Contribuições são o que tornam a comunidade de código aberto um lugar incrível para aprender, inspirar e criar. Qualquer contribuição que você fizer será **muito apreciada**.
+
+Se você tiver uma sugestão para melhorar o projeto, por favor, crie um fork do repositório e crie um pull request. Você também pode simplesmente abrir uma issue com a tag "enhancement".
+
+1.  Faça o Fork do projeto
+2.  Crie sua Feature Branch (`git checkout -b feature/AmazingFeature`)
+3.  Faça o Commit de suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4.  Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
+5.  Abra um Pull Request
+
+## 👤 Contato
+
+Raniery Fialho - [GitHub](https://github.com/ranieryfialho/)
+
+---
+
+[React-shield]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
+[React-url]: https://reactjs.org/
+[Vite-shield]: https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white
+[Vite-url]: https://vitejs.dev/
+[Firebase-shield]: https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black
+[Firebase-url]: https://firebase.google.com/
+[Tailwind-shield]: https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white
+[Tailwind-url]: https://tailwindcss.com/
+[Shadcn-url]: https://ui.shadcn.com/
+[Lucide-url]: https://lucide.dev/
