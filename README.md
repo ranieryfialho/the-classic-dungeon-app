@@ -43,20 +43,3 @@ Se você tiver uma sugestão para melhorar o projeto, por favor, crie um fork do
 3.  Faça o Commit de suas mudanças (`git commit -m 'Add some AmazingFeature'`)
 4.  Faça o Push para a Branch (`git push origin feature/AmazingFeature`)
 5.  Abra um Pull Request
-
-## 👤 Contato
-
-Raniery Fialho - [GitHub](https://github.com/ranieryfialho/)
-
----
-
-[React-shield]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Vite-shield]: https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white
-[Vite-url]: https://vitejs.dev/
-[Firebase-shield]: https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black
-[Firebase-url]: https://firebase.google.com/
-[Tailwind-shield]: https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white
-[Tailwind-url]: https://tailwindcss.com/
-[Shadcn-url]: https://ui.shadcn.com/
-[Lucide-url]: https://lucide.dev/
