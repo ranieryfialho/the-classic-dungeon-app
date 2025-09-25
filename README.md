@@ -32,47 +32,6 @@ Este projeto foi construído com as seguintes tecnologias:
 * **Componentes UI**: [Shadcn/UI][Shadcn-url]
 * **Ícones**: [Lucide React][Lucide-url]
 
-## 🚀 Começando
-
-Para rodar o projeto em sua máquina local, siga os passos abaixo.
-
-### Pré-requisitos
-
-* Node.js (versão 18 ou superior)
-* npm ou yarn
-
-### Instalação
-
-1.  **Clone o repositório:**
-    ```sh
-    git clone [https://github.com/ranieryfialho/the-classic-dungeon-app.git](https://github.com/ranieryfialho/the-classic-dungeon-app.git)
-    cd the-classic-dungeon-app
-    ```
-
-2.  **Instale as dependências:**
-    ```sh
-    npm install
-    ```
-
-3.  **Configure as variáveis de ambiente:**
-    * Crie um arquivo `.env` na raiz do projeto.
-    * Adicione suas credenciais do Firebase a este arquivo, prefixando cada chave com `VITE_`.
-        ```env
-        VITE_FIREBASE_API_KEY="SUA_API_KEY"
-        VITE_FIREBASE_AUTH_DOMAIN="SEU_AUTH_DOMAIN"
-        VITE_FIREBASE_PROJECT_ID="SEU_PROJECT_ID"
-        VITE_FIREBASE_STORAGE_BUCKET="SEU_STORAGE_BUCKET"
-        VITE_FIREBASE_MESSAGING_SENDER_ID="SEU_MESSAGING_SENDER_ID"
-        VITE_FIREBASE_APP_ID="SEU_APP_ID"
-        ```
-
-4.  **Rode o servidor de desenvolvimento:**
-    ```sh
-    npm run dev
-    ```
-
-    A aplicação estará disponível em `http://localhost:5173`.
-
 ## 🤝 Contribuições
 
 Contribuições são o que tornam a comunidade de código aberto um lugar incrível para aprender, inspirar e criar. Qualquer contribuição que você fizer será **muito apreciada**.
