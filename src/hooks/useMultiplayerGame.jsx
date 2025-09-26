@@ -372,21 +372,37 @@ export function MultiplayerProvider({ children }) {
 
   const backToMenu = useCallback(async () => {
     const roomId = gameState.room?.id;
-    if (authUser && roomId) {
-      await runPlayerUpdateTransaction((players) => {
-        const updated = players.filter((p) => p.id !== authUser.uid);
-        if (
-          updated.length > 0 &&
-          players.find((p) => p.id === authUser.uid)?.isHost
-        ) {
-          updated[0].isHost = true;
+    if (!authUser || !roomId) return;
+
+    const roomRef = doc(db, "rooms", roomId);
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const roomDoc = await transaction.get(roomRef);
+        if (!roomDoc.exists()) {
+          return;
         }
-        return updated;
+
+        const currentPlayers = roomDoc.data().players || [];
+        const updatedPlayers = currentPlayers.filter((p) => p.id !== authUser.uid);
+
+        if (updatedPlayers.length === 0) {
+          transaction.delete(roomRef);
+        } else {
+          const wasHost = currentPlayers.find((p) => p.id === authUser.uid)?.isHost;
+          if (wasHost) {
+            updatedPlayers[0].isHost = true;
+          }
+          transaction.update(roomRef, { players: updatedPlayers });
+        }
       });
+    } catch (error) {
+      console.error("Erro ao sair e limpar a sala:", error);
+    } finally {
+      saveRoomId(null);
+      setGameState(initialGameState);
+      if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
     }
-    saveRoomId(null);
-    setGameState(initialGameState);
-    if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
   }, [authUser, gameState.room?.id, runPlayerUpdateTransaction, saveRoomId]);
 
   const setPlayerSkipTurns = useCallback(
