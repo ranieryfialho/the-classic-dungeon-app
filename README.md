@@ -15,7 +15,7 @@ The Classic Dungeon é uma aplicação web que recria a experiência de um jogo 
 
 * **Autenticação de Usuários**: Sistema de login e cadastro para salvar o progresso dos jogadores.
 * **Lobby Multiplayer**: Crie salas de jogo privadas ou entre em salas existentes usando um código ou um link de convite.
-* **Seleção de Personagens**: Escolha entre 6 classes únicas (Guerreiro, Elfo, Anão, Feiticeiro, Paladino e Ladrão), cada одна com vantagens e habilidades especiais.
+* **Seleção de Personagens**: Escolha entre 6 classes únicas (Guerreiro, Elfo, Anão, Feiticeiro, Paladino e Ladrão), cada umа com vantagens e habilidades especiais.
 * **Dashboard em Tempo Real**: Acompanhe o status, ouro, itens e magias de todos os jogadores da equipe durante a partida.
 * **Sistema de Turnos**: A ordem de jogo é definida aleatoriamente por rolagem de dados no início da partida.
 * **Interatividade**: Gerencie o inventário, ouro, status de combate (ferido, atordoado, etc.) e magias do seu personagem.
