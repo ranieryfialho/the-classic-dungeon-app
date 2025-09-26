@@ -599,6 +599,7 @@ export function MultiplayerProvider({ children }) {
     },
     [runPlayerUpdateTransaction, addLogEntry, gameState.players]
   );
+
   const removeItemFromInventory = useCallback(
     (playerId, itemIndex) => {
       const player = gameState.players[playerId];
@@ -685,7 +686,10 @@ export function MultiplayerProvider({ children }) {
   );
 
   const proposeEndGame = useCallback(() => {
-    addLogEntry(`🏁 ${authUser.displayName} propôs o fim do jogo!`);
+    const currentPlayer = gameState.players[authUser.uid];
+    if (!currentPlayer) return;
+
+    addLogEntry(`🏁 ${currentPlayer.name} propôs o fim do jogo!`);
     updateRoomData({
       endGameProposal: {
         proposerId: authUser.uid,
@@ -693,23 +697,102 @@ export function MultiplayerProvider({ children }) {
         status: "pending",
       },
     });
-  }, [authUser, updateRoomData, addLogEntry]);
+  }, [authUser, gameState, updateRoomData, addLogEntry]);
+  
   const voteOnEndGame = useCallback(
     (vote) => {
+      const currentPlayer = gameState.players[authUser.uid];
+      if (!currentPlayer) return;
+
       const voteText = vote === "accept" ? "aceitou" : "rejeitou";
-      addLogEntry(`🗳️ ${authUser.displayName} ${voteText} o fim do jogo.`);
+      addLogEntry(`🗳️ ${currentPlayer.name} ${voteText} o fim do jogo.`);
       updateRoomData({ [`endGameProposal.votes.${authUser.uid}`]: vote });
     },
-    [authUser, updateRoomData, addLogEntry]
+    [authUser, gameState, updateRoomData, addLogEntry]
   );
 
   const endGameAndSaveHistory = useCallback(async () => {
-    // ... Lógica de fim de jogo
-  }, [gameState, saveRoomId]);
+    const { room, players } = gameState;
+    if (!room || !players) return;
+
+    const playerList = Object.values(players);
+    const winner = playerList.reduce((prev, current) => {
+      if (current.gold > prev.gold) return current;
+      if (
+        current.gold === prev.gold &&
+        current.id === room.endGameProposal.proposerId
+      )
+        return current;
+      return prev;
+    });
+
+    addLogEntry(
+      `🏆 O jogo terminou! O vencedor é ${
+        winner.name
+      } com ${winner.gold.toLocaleString("pt-BR")} de ouro!`
+    );
+
+    const matchData = {
+      roomId: room.id,
+      winnerId: winner.id,
+      winnerName: winner.name,
+      endedAt: serverTimestamp(),
+      playerIds: playerList.map((p) => p.id),
+      players: playerList.map((p) => ({
+        userId: p.id,
+        playerName: p.name,
+        characterClass: p.character.className,
+        gold: p.gold,
+      })),
+    };
+
+    try {
+      const matchesCollectionRef = collection(db, "matches");
+      await addDoc(matchesCollectionRef, matchData);
+
+      const roomRef = doc(db, "rooms", room.id);
+      await deleteDoc(roomRef);
+    } catch (error) {
+      console.error("Erro ao salvar histórico e finalizar o jogo:", error);
+    } finally {
+      saveRoomId(null);
+      setGameState(initialGameState);
+      if (unsubscribeRoomRef.current) unsubscribeRoomRef.current();
+    }
+  }, [gameState, saveRoomId, addLogEntry]);
 
   const processEndGameVotes = useCallback(async () => {
-    // ... Lógica de votação
-  }, [gameState, authUser, updateRoomData, endGameAndSaveHistory]);
+    const { room, players } = gameState;
+    const proposal = room?.endGameProposal;
+    const currentPlayer = authUser ? players[authUser.uid] : null;
+
+    if (!proposal || proposal.status !== 'pending' || !currentPlayer || !currentPlayer.isHost) {
+      return;
+    }
+
+    const votes = proposal.votes || {};
+    const totalPlayers = Object.keys(players).length;
+    const rejectVotes = Object.values(votes).filter(v => v === 'reject').length;
+    
+    if (rejectVotes > 0) {
+      addLogEntry("🚫 A proposta para finalizar o jogo foi rejeitada. A aventura continua!");
+      await updateRoomData({
+        endGameProposal: { ...proposal, status: 'rejected' },
+      });
+      setTimeout(() => updateRoomData({ endGameProposal: null }), 5000);
+      return;
+    }
+    
+    const requiredAccepts = totalPlayers - 1;
+    const acceptVotes = Object.values(votes).filter(v => v === 'accept').length;
+
+    if (acceptVotes >= requiredAccepts) {
+      await updateRoomData({
+        'endGameProposal.status': 'finished'
+      });
+      endGameAndSaveHistory();
+    }
+  }, [gameState, authUser, updateRoomData, endGameAndSaveHistory, addLogEntry]);
 
   const value = useMemo(
     () => ({
